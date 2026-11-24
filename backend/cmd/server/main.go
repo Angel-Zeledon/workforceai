@@ -386,6 +386,7 @@ func run(log *slog.Logger) error {
 	deps.FileComments = wireFileComments(pg, rec, ws.drive, cfg.App.OrgID) // F7: comments anchored to a passage of a file
 	deps.OfficeTemplates = wireOfficeTemplates(pg) // F3: a department saved as a template and installed elsewhere
 	deps.AgentFolders = agentFolders(ws) // folder access per agent (folder_access.go)
+	orch.SetHelperFileCheck(helperFileCheck(deps.AgentFolders)) // temporary helpers never read what their responsible cannot
 	deps.LinkImports = wireLinkImports(ctx, cfg, log, pg, rec, cw, ws.drive, custSvc, orgLister(store)) // import from a link (single line)
 	deps.VendorIntegrations = &cfg.VendorIntegrations // v1: vendor-specific integrations (VENDOR_INTEGRATIONS, default off)
 	// Client portal (B13): read-only share links of a project with the firm's branding.
@@ -440,7 +441,7 @@ func run(log *slog.Logger) error {
 			Policy:              idw.sso, // per-organization sign-in policy (require MFA, enforce SSO)
 			AutoJoin:            idw.sso, // join the organization that verified your e-mail domain, once the address is proven
 			RequireVerification: cfg.EmailVerification, Mailer: authMailer, AppURL: cfg.UIBaseURL,
-			TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
+			HelpersEnabled: cfg.App.HelpersEnabled, TrialEnabled: cfg.TrialEnabled, TrialTTL: time.Duration(cfg.TrialTTLHours) * time.Hour, TrialGlobalPerDay: cfg.TrialGlobalPerDay, TrialEmailDomain: cfg.TrialEmailDomain,
 			Logf:                func(f string, a ...any) { log.Warn(fmt.Sprintf(f, a...)) },
 			Store:               authStore,
 			Secret:              []byte(cfg.JWTSecret),

@@ -70,14 +70,15 @@ func (c *Client) body(ctx context.Context, path string, in any) ([]byte, error) 
 }
 
 var (
-	_ application.Runtime     = (*Client)(nil)
-	_ application.Estimator   = (*Client)(nil)
-	_ application.ChatRuntime = (*Client)(nil)
-	_ application.Reviewer    = (*Client)(nil)
+	_ application.Runtime      = (*Client)(nil)
+	_ application.Estimator    = (*Client)(nil)
+	_ application.ChatRuntime  = (*Client)(nil)
+	_ application.Reviewer     = (*Client)(nil)
+	_ application.SplitRuntime = (*Client)(nil)
 
 	_ application.CounterargumentRuntime = (*Client)(nil)
 	_ application.DebateRuntime          = (*Client)(nil)
-	_ application.LLMTester   = (*Client)(nil)
+	_ application.LLMTester              = (*Client)(nil)
 )
 
 func (c *Client) do(ctx context.Context, method, path string, in, out any) error {
@@ -177,6 +178,12 @@ func (c *Client) Debate(ctx context.Context, in application.DebateRequest) (out 
 // Estimate implements application.Estimator (POST /v1/estimate).
 func (c *Client) Estimate(ctx context.Context, in application.EstimateRequest) (out application.EstimateResponse, err error) {
 	err = c.do(ctx, http.MethodPost, "/v1/estimate", in, &out)
+	return
+}
+
+// Split implements application.SplitRuntime (POST /v1/split): is the request worth dividing into helpers.
+func (c *Client) Split(ctx context.Context, in application.SplitRequest) (out application.SplitResponse, err error) {
+	err = c.do(ctx, http.MethodPost, "/v1/split", in, &out)
 	return
 }
 

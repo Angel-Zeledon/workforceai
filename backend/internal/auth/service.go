@@ -58,6 +58,8 @@ type Config struct {
 	SeatLimit func(ctx context.Context, org string) (limit int, plan string)
 	// Trial accounts ("try it without signing up"): TrialEnabled turns on POST /auth/trial.
 	TrialEnabled      bool
+	// HelpersEnabled (HELPERS_ENABLED) is only told to the frontend through GET /auth/config.
+	HelpersEnabled bool
 	TrialTTL          time.Duration // default 24h
 	TrialGlobalPerDay int           // accounts minted per day, all addresses together (default 300)
 	TrialEmailDomain  string        // domain of the generated addresses (default "prueba.invalid")

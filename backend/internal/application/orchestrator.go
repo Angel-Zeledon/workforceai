@@ -96,6 +96,7 @@ func NewOrchestrator(ctx context.Context, cfg Config, store Store, rt Runtime, l
 	o.budget = NewBudget(cfg, store, rec, log)
 	o.durable.runs, _ = store.(RunStore)
 	o.helpers.store, _ = store.(HelperStore)
+	o.budget.onHelperSpend = func(c context.Context, org, group string) { o.helperNotify(c, org, group) }
 	o.root = ctx
 	o.base, o.cancel = context.WithCancel(ctx)
 	return o
@@ -225,8 +226,8 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
 	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
-	rctx = WithCustomer(rctx, rs.customer)               // B12: the run works for this customer (tools re-resolve it from the request id)
-	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx)) // queue priority (orgqueue.go)
+	rctx = WithCustomer(rctx, rs.customer)                           // B12: the run works for this customer (tools re-resolve it from the request id)
+	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx))             // queue priority (orgqueue.go)
 	rctx = WithWorkPeople(WithWorkAgents(rctx, addressed...), asker) // D3: who receives its live events
 	o.track(req.ID)
 	o.wg.Add(1)
@@ -288,7 +289,13 @@ func (o *Orchestrator) process(ctx context.Context, rs *run) {
 	if !o.reviewPlan(ctx, rs, tasks) {
 		return // plan rejected or not reviewed: the request is already failed with an explanation
 	}
-	if !o.confirmEstimate(ctx, rs, tasks) {
+	tasks, helpersOn, ok := o.helperProposalStep(ctx, rs, tasks) // temporary helpers: offered only with HELPERS_ENABLED
+	if !ok {
+		return
+	}
+	if helpersOn {
+		o.estimateAccepted(ctx, rs, tasks) // the person accepted the helpers and their cap: no second cost prompt
+	} else if !o.confirmEstimate(ctx, rs, tasks) {
 		return // cancelled or not confirmed: the request is already failed with an explanation
 	}
 	o.debateBeforeDecision(ctx, rs, plan, tasks) // B5: at most one advisory debate; never blocks the plan
@@ -328,12 +335,12 @@ func (o *Orchestrator) finish(ctx context.Context, rs *run, tasks []domain.Task,
 	contributors := []string{}
 	joined := map[string]bool{} // helper groups whose responsible joined the parts: the report carries that result, not every part
 	for _, t := range tasks {
-		if t.Helper != nil && t.Helper.Index == 0 && outcomes[t.ID] == OutcomeDone {
+		if isFinalUnion(t.Helper) && outcomes[t.ID] == OutcomeDone {
 			joined[t.Helper.GroupID] = true
 		}
 	}
 	for _, t := range tasks {
-		if isHelperPart(t) && joined[t.Helper.GroupID] {
+		if (isHelperPart(t) || isMidUnion(t.Helper)) && joined[t.Helper.GroupID] {
 			continue
 		}
 		if outcomes[t.ID] == OutcomeDone {

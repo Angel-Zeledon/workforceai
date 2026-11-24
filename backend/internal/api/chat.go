@@ -43,6 +43,9 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 		// GoalID (F1, optional) is the company goal any request this message creates contributes to, like
 		// POST /requests (a goal that is not linkable answers 400 at once).
 		GoalID string `json:"goal_id"`
+		// Helpers (optional, office conversation only) asks for temporary helpers without a position: the assistant
+		// coordinates and the request is offered split into parts (HELPERS_ENABLED; 404 while it is off).
+		Helpers bool `json:"helpers"`
 	}
 	if err := s.decode(w, r, &body); err != nil {
 		s.fail(w, err)
@@ -69,6 +72,17 @@ func (s *server) postChat(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx := application.WithGoal(application.WithCustomer(r.Context(), body.CustomerID), body.GoalID)
 	ctx = application.WithActorName(ctx, s.authorName(ctx)) // E0: the author shown on the message and told to the agent
+	if body.Helpers {
+		if s.Orch == nil || !s.Orch.HelpersEnabled() {
+			s.fail(w, notFound("helpers", "disabled"))
+			return
+		}
+		if domain.PublicChatConv(body.Conversation) != domain.ChatOffice {
+			s.fail(w, errInvalid("helpers without a position are asked in the office conversation"))
+			return
+		}
+		ctx = application.WithHelpersFree(ctx)
+	}
 	if len(body.Attachments) > 0 {
 		// a path the person may not read (an office folder) is dropped exactly like one that does not resolve; more
 		// than the limit is left whole so the count is refused as before, whatever is hidden

@@ -368,6 +368,16 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 	}
 	slices.SortFunc(edited, func(x, y domain.Task) int { return strings.Compare(x.ID, y.ID) })
 
+	// A request held by a helper proposal has no scheduler yet: its new tasks (the parts and the joining task) are
+	// stored and the request, once the person's decision reaches it (helpers_propose.go), runs them with the rest.
+	if req.Status == domain.RequestAwaitingConfirmation && o.helperProposalHolds(ctx, requestID) {
+		if err := o.storeWrites(ctx, fresh, edited, requeue, a.Drop, byID, nil); err != nil {
+			return AmendResult{}, err
+		}
+		o.announceAmend(ctx, req, fresh, edited, requeue, a)
+		return AmendResult{Added: newIDs, Requeued: slices.Clone(a.Requeue)}, nil
+	}
+
 	// ---- choose where it runs ----
 	required := map[string]bool{} // existing tasks a live run must know
 	for _, t := range edited {

@@ -47,6 +47,7 @@ var defaultCallMaxTokens = map[domain.UsageKind]int{
 	UsageDebate:            1600,
 	domain.UsageChat:       350,
 	UsageSummarize:         2000,
+	UsageSplit:             1500,
 }
 
 // Call kinds that have an output cap (same names and defaults as agent-runtime/app/cost_control.py) but are
@@ -58,6 +59,9 @@ const (
 	// UsageCounterargument is the devil's advocate review of a high-risk approval (B8); priced like a planner call.
 	UsageCounterargument domain.UsageKind = "counterargument"
 	UsageSummarize       domain.UsageKind = "summarize"
+	// UsageSplit is the call that decides whether a request is worth dividing among temporary helpers; priced like a
+	// chat-sized call and recorded in the ledger as a planner call.
+	UsageSplit domain.UsageKind = "split"
 )
 
 // callMaxTokens is the output cap of one call kind (MAX_TOKENS_<KIND>, like the runtime).

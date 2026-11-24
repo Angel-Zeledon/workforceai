@@ -142,6 +142,7 @@ type opts struct {
 	inboxes        *inboxOpts          // mount the data inboxes (inboxes_api_test.go); implies the drive
 	deps           func(d *api.Deps)   // last word on the dependencies before the router is built (linkimports_api_test.go)
 	questions      bool                // agents may ask people mid-task (questions_api_test.go)
+	cfg            func(*application.Config) // last word on the orchestrator configuration (helpers_api_test.go)
 }
 
 type env struct {
@@ -163,6 +164,9 @@ func newEnv(t *testing.T, o opts) *env {
 	t.Helper()
 	cfg := application.DefaultConfig()
 	cfg.IdleDelay = 0
+	if o.cfg != nil {
+		o.cfg(&cfg)
+	}
 	mem := memory.New()
 	spy := &orgSpy{Store: mem, orgs: map[string]int{}}
 	if err := mem.Seed(context.Background(), domain.SeedOrg(cfg.BudgetUSD), roles.SeedAgents()); err != nil {

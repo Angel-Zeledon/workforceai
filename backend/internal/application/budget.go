@@ -41,6 +41,8 @@ type Budget struct {
 	// groups (optional) holds the temporary helper groups: their hard cap is checked on every reservation and their
 	// real spend is added to them on every recorded call (helpers_run.go).
 	groups HelperStore
+	// onHelperSpend (optional) tells the orchestrator a group spent, so its live view is refreshed (coalesced).
+	onHelperSpend func(ctx context.Context, org, groupID string)
 	// spend is the incremental org spend counter (spend.go).
 	spend spendCounter
 	// OrgCapFor (optional) returns a stricter HARD cap for one organization, 0 = none: the free plan
@@ -285,6 +287,8 @@ func (b *Budget) Record(ctx context.Context, requestID string, u domain.UsageEnt
 	if hc := helperCtxFrom(ctx); hc != nil && b.groups != nil && cost > 0 { // real spend of the group (parts and joining task)
 		if err := b.groups.AddHelperSpend(ctx, org, hc.groupID, cost); err != nil {
 			b.log.Warn("helper spend", "group", hc.groupID, "err", err)
+		} else if b.onHelperSpend != nil {
+			b.onHelperSpend(ctx, org, hc.groupID)
 		}
 	}
 	if err := b.store.AddUsage(ctx, org, u); err != nil {

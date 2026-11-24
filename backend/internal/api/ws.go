@@ -61,8 +61,12 @@ func (s *server) ws(w http.ResponseWriter, r *http.Request) {
 		}
 		seen = list(agents)
 	}
+	helloPayload := map[string]any{"agents": seen, "helpers_enabled": s.Orch != nil && s.Orch.HelpersEnabled()}
+	if groups := s.helperGroupsForHello(r); len(groups) > 0 {
+		helloPayload["helper_groups"] = groups // the open proposals and the groups in progress this person sees
+	}
 	hello, _ := json.Marshal(domain.Event{ID: uuid.NewString(), Type: domain.EvHello, TS: time.Now().UTC(), OrgID: org,
-		Payload: map[string]any{"agents": seen}})
+		Payload: helloPayload})
 	_ = conn.SetWriteDeadline(time.Now().Add(writeWait))
 	if err := conn.WriteMessage(websocket.TextMessage, hello); err != nil {
 		return

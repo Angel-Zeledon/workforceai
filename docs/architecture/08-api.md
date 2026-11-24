@@ -1488,4 +1488,23 @@ Un error nunca llega a la persona como texto de código. Contrato:
 - **400 de JSON mal formado**: `{"error":"La solicitud no tiene un formato válido","code":"bad_request","message":...}`, sin el texto del decoder (que queda en el log a nivel debug). Sigue siendo `domain.ErrInvalid` (y `io.EOF` para un cuerpo vacío).
 - Los códigos estables existentes no cambian.
 
+## 57. Ayudantes temporales (aditivo; `HELPERS_ENABLED`, apagado por defecto)
+
+Un **ayudante** es una parte de un pedido; su responsable es siempre un empleado (`docs/superpowers/specs/2026-11-23-ayudantes-temporales-design.md`). Con la bandera apagada todo lo de esta sección responde **404** y no cambia ninguna otra respuesta.
+
+| Ruta | Cuerpo | Respuesta |
+|---|---|---|
+| `POST /requests/{id}/helpers` | `{count, cap_usd}` | `200 {group}`: acepta la propuesta |
+| `POST /requests/{id}/helpers/decline` | `{}` (o vacío) | `200 {group}`: el pedido sigue con su plan normal |
+| `POST /requests/{id}/helpers/stop` | `{part?}` | `200 {group}`: detiene una parte que no empezó, o todo lo que falta |
+| `POST /requests/{id}/helpers/retry` | `{part}` | `200 {group}`: repite una parte fallada o detenida |
+
+- Permiso `conversations:write` (un viewer recibe 403) **y** poder pedirle trabajo al responsable (la regla del chat: `Rights.Use` de la oficina; si no, el error `errAgentNotUsable`). Un pedido de otra empresa, uno cuyo trabajo la persona no ve (oficina privada) y uno sin propuesta son **404**.
+- Aceptar es **idempotente**: un grupo ya lanzado devuelve `200` con el mismo grupo y no crea nada. Errores: `409` si la propuesta fue rechazada (y para `stop`/`retry` antes de lanzar); `400` si `count < 2`, `count` supera `max_count` (o las partes), `cap_usd` es menor que la estimación mínima o **mayor que el saldo/tope que ya aplica** (presupuesto de la organización y tope del pedido); el error de límite del plan (`code:"plan_limit"`, `limit_kind:"helper_parts"`) si el plan ya no permite tantas partes. Con menos `count` que partes, partes vecinas se juntan.
+- `cap_usd` es un **tope duro** del grupo: al alcanzarlo se detienen las partes que faltan y el responsable entrega lo que haya diciendo qué falta.
+- `GET /requests/{id}` suma `helper_group` (ausente sin grupo o con la bandera apagada): `{id, request_id, owner_agent_id, mode: "position"|"free", count, max_count, parallel, parts: [{index, label, task_id, status: pending|running|done|failed|stopped}], estimate: {min_usd, max_usd}, cap_usd, spent_usd, status: proposed|running|joining|done|stopped|failed|declined, accepted_by, union_task_id, stop_reason: user|cap, created_at, finished_at}`. Las tareas llevan `helper: {group_id, index, total, label}` (`index 0` = uniones del responsable).
+- `POST /messages` acepta `"helpers": true` (solo `conversation:"office"`, si no `400`; con la bandera apagada `404`): ver `chat-routing.md` sección 15.
+- `GET /auth/config` suma `helpers_enabled` (bool, siempre presente) para que el frontend muestre u oculte todo. El `hello` del WebSocket suma `helpers_enabled` y `helper_groups` (`03-eventos-realtime.md` sección 10).
+- `GET /needs-you` suma el `kind: "helpers"` (una propuesta abierta de un pedido que la persona hizo y puede aceptar; `Repartir en N ayudantes`, `target: /requests/{id}`, no resoluble en un paso).
+
 Frontend: `lib/errors.ts` (`describeError`, `errorText`, `toastError`) sobre `lib/errorsCore.ts` (clasificación pura: red, timeout, 401/403/404/409/413/415/422/423/429/5xx y el catálogo `CODE_PHRASE` código -> frase `err.c.*` en es/en/pt). Un código desconocido nunca se muestra: cae a la frase de su estado HTTP o a la genérica con "Si se repite, comparte esta referencia: {ref}" (la del backend, o una local registrada en consola). `components/ui/ErrorNote.tsx` pinta el aviso con "Reintentar"; `app/error.tsx`, `app/(app)/error.tsx` y `app/global-error.tsx` son los límites de error de React. `lib/errors.test.mjs` incluye una guarda que falla si reaparece `e.message` / `String(e)` en una pantalla.

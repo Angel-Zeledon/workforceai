@@ -3,6 +3,7 @@ package api
 import (
 	"cmp"
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -90,7 +91,7 @@ func (s *server) collectNeedsYou(r *http.Request, o needsyou.Options) needsyou.R
 		return needsyou.Collect(r.Context(), o)
 	}
 	res := needsyou.Collect(r.Context(), o,
-		s.nyApprovals(r, v), s.nyQuestions(r, v), s.nySuggestions(r, v), s.nyTrust(r, v))
+		s.nyApprovals(r, v), s.nyQuestions(r, v), s.nySuggestions(r, v), s.nyTrust(r, v), s.nyHelpers(r, v))
 	if len(res.Unavailable) > 0 && s.Log != nil {
 		s.Log.Warn("needs-you: a source could not be read", "sources", res.Unavailable)
 	}
@@ -243,6 +244,49 @@ func (s *server) nyTrust(r *http.Request, v nyViewer) needsyou.Source {
 			}
 			out = append(out, needsyou.Item{ID: p.ID, AgentID: p.AgentID, CreatedAt: p.CreatedAt, ProposalKind: p.Kind,
 				FromLevel: p.FromLevel, ToLevel: p.ToLevel, Target: "/?agent=" + url.QueryEscape(p.AgentID)})
+		}
+		return out, nil
+	}}
+}
+
+// nyHelpers: the helper proposals waiting for the person who asked for the request (and may still ask its responsible
+// for work, as accepting does). Without authentication the demo acts as the owner of everything. The request waits
+// until they answer, so it is blocked work like an approval.
+func (s *server) nyHelpers(r *http.Request, v nyViewer) needsyou.Source {
+	if s.Orch == nil || !s.Orch.HelpersEnabled() || !v.can(auth.PermConversationsPost) {
+		return needsyou.Source{}
+	}
+	return needsyou.Source{Kind: needsyou.KindHelpers, Collect: func(ctx context.Context, full bool) ([]needsyou.Item, error) {
+		if err := v.ws.load(); err != nil {
+			return nil, err
+		}
+		hs, ok := s.Store.(application.HelperStore)
+		if !ok {
+			return nil, nil
+		}
+		gs, err := hs.ListHelperGroups(ctx, s.org(r), domain.HelperProposed)
+		if err != nil {
+			return nil, err
+		}
+		var out []needsyou.Item
+		for _, g := range gs {
+			if s.AuthEnabled && s.Orch.RequestedBy(ctx, g.RequestID) != v.uid { // it is the asker's to answer
+				continue
+			}
+			if !v.ws.request(g.RequestID) || !v.ws.use(g.OwnerAgentID) {
+				continue
+			}
+			it := needsyou.Item{ID: g.RequestID, Title: fmt.Sprintf("Repartir en %d ayudantes", g.Count), AgentID: g.OwnerAgentID, CreatedAt: g.CreatedAt,
+				Target: "/requests/" + url.PathEscape(g.RequestID)}
+			if full {
+				if req, err := s.Store.GetRequest(ctx, s.org(r), g.RequestID); err == nil {
+					it.Detail = req.Text
+					if len([]rune(it.Detail)) > 140 {
+						it.Detail = string([]rune(it.Detail)[:140]) + "…"
+					}
+				}
+			}
+			out = append(out, it)
 		}
 		return out, nil
 	}}

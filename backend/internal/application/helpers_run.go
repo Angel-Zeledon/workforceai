@@ -214,6 +214,9 @@ func (o *Orchestrator) helperEnter(ctx context.Context, rs *run, t domain.Task) 
 		o.failTask(ctx, rs, t, fmt.Errorf("el grupo de ayudantes de la tarea no existe: %w", err))
 		return ctx, release, OutcomeFailed, true
 	}
+	if isMidUnion(t.Helper) && o.helperPassThrough(ctx, rs, t) { // a batch whose results already fit needs no call
+		return ctx, release, OutcomeDone, true
+	}
 	if !isHelperPart(t) { // the joining task: normal run, its spend counts for the group
 		return withHelperCtx(ctx, helperCtx{groupID: g.ID}), release, OutcomeDone, false
 	}
@@ -235,6 +238,7 @@ func (o *Orchestrator) helperEnter(ctx context.Context, rs *run, t domain.Task) 
 		}
 	}
 	release = func() { <-sem }
+	o.helperNotify(ctx, o.org(ctx), g.ID)                                 // a part starts
 	if cur, err := hs.GetHelperGroup(ctx, o.org(ctx), g.ID); err == nil { // stopped while it waited for its slot
 		if why := helperStopReason(cur, t.Helper.Index); why != "" {
 			o.helperMarkCap(ctx, cur, why)
@@ -331,4 +335,54 @@ func (o *Orchestrator) helperAfterRun(ctx context.Context, t domain.Task) {
 	if _, err := o.helperRefresh(ctx, t.Helper.GroupID); err != nil {
 		o.log.Warn("helpers: refresh group", "group", t.Helper.GroupID, "err", err)
 	}
+	o.helperNotify(ctx, o.org(ctx), t.Helper.GroupID) // its spend and result
+}
+
+// helperPassThrough finishes a batch join WITHOUT a model call when the results of its parts, together, fit in its
+// share of the dependency budget (the budget over the number of batches): the final join then reads them in full.
+// A batch that does not fit runs as a normal call of the responsible that condenses it. It reports whether it passed
+// the results through.
+func (o *Orchestrator) helperPassThrough(ctx context.Context, rs *run, t domain.Task) bool {
+	batch := helperBatchSize(o.cfg)
+	nMids := max((t.Helper.Total+batch-1)/batch, 1)
+	share := o.cfg.depBudget() / nMids
+	rs.mu.Lock()
+	var deps []domain.Task
+	for _, d := range t.DependsOn {
+		if dt, ok := rs.done[d]; ok && dt.Output != nil {
+			deps = append(deps, dt)
+		}
+	}
+	rs.mu.Unlock()
+	total := 0
+	for _, d := range deps {
+		total += outputTokens(*d.Output)
+	}
+	if len(deps) == 0 || total > share {
+		return false
+	}
+	out := &domain.StructuredOutput{Confidence: 1, Metrics: map[string]any{"helper_passthrough": true, "parts": len(deps)}}
+	var lines []string
+	for _, d := range deps {
+		o2 := d.Output
+		out.Confidence = min(out.Confidence, o2.Confidence)
+		lines = append(lines, fmt.Sprintf("%s: %s", d.Title, o2.Summary))
+		out.Findings = append(out.Findings, o2.Findings...)
+		out.Hypotheses = append(out.Hypotheses, o2.Hypotheses...)
+		out.Evidence = append(out.Evidence, o2.Evidence...)
+		out.Recommendations = append(out.Recommendations, o2.Recommendations...)
+	}
+	out.Summary = strings.Join(lines, "\n")
+	out.Normalize()
+	now := time.Now().UTC()
+	t.Status, t.FinishedAt, t.Output = domain.TaskDone, &now, out
+	if err := o.store.UpdateTask(context.WithoutCancel(ctx), o.org(ctx), t); err != nil {
+		return false
+	}
+	rs.mu.Lock()
+	rs.done[t.ID] = t
+	rs.mu.Unlock()
+	o.rec.Emit(ctx, Action{Type: domain.EvTaskCompleted, AgentID: t.AgentID, Entity: "task", EntityID: t.ID, SkipAudit: true,
+		Payload: map[string]any{"task": t, "passthrough": true}, Text: "Grupo de resultados juntado sin llamada: " + t.Title})
+	return true
 }

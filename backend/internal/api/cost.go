@@ -127,6 +127,8 @@ type requestWithCost struct {
 	Estimate     *domain.CostEstimate `json:"estimate,omitempty"`
 	// Goal (F1) is the company goal the request contributes to, when the person sees it.
 	Goal *goalRef `json:"goal,omitempty"`
+	// HelperGroup is the group of temporary helpers of the request (proposed, running or done); absent without one.
+	HelperGroup *domain.HelperGroup `json:"helper_group,omitempty"`
 }
 
 func (s *server) withCost(r *http.Request, d application.RequestDetail) requestWithCost {

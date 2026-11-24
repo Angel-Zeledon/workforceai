@@ -178,6 +178,8 @@ type chatTurn struct {
 	hidden  map[string]bool
 	noticed bool // a blocking notice (pause, budget) was already posted
 	handoff *handoff
+	// helpersFree is the coordinator (agent id) of a "helpers without a position" message; "" = an ordinary turn.
+	helpersFree string
 }
 
 // handoff is a redirect the user may accept ("yes, pass it on"): the colleague
@@ -388,6 +390,13 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 		author: PersonFrom(ctx), authorName: ActorNameFrom(ctx), id: newID(), text: text, userMsgID: newID(), agents: agents,
 		byID: map[string]domain.Agent{}, style: o.loadStyle(ctx), hidden: hidden}
 	t.loc = chatLocale(t.style)
+	if helpersFreeFrom(ctx) {
+		id, err := o.helperCoordinator(ctx, t)
+		if err != nil {
+			return ChatTurn{}, err
+		}
+		t.helpersFree = id
+	}
 	for _, a := range agents {
 		t.byID[a.ID] = a
 	}
@@ -568,7 +577,11 @@ func (o *Orchestrator) runTurn(ctx context.Context, t *chatTurn) {
 		route = RouteResponse{Intent: h.Intent, Topic: "general", Source: "handoff", Responders: []RouteResponder{
 			{AgentID: h.To, Role: domain.RolePrimary, Reason: chatText(t.loc, "reason_handoff")}}}
 	} else {
-		route = o.decideRoute(ctx, t)
+		if t.helpersFree != "" {
+			route = RouteResponse{Intent: domain.IntentTask, Topic: "general", Source: "helpers", Responders: []RouteResponder{{AgentID: t.helpersFree, Role: domain.RolePrimary, Reason: "helpers"}}}
+		} else {
+			route = o.decideRoute(ctx, t)
+		}
 	}
 	ids := make([]string, 0, len(route.Responders))
 	for _, r := range route.Responders {
@@ -862,7 +875,7 @@ func (o *Orchestrator) chatTask(ctx context.Context, t *chatTurn, route RouteRes
 	if res == speakSkipped && !o.chatAdmit(ctx, agent.ID).Allowed {
 		return // paused or kill switch: no work is created
 	}
-	link := &chatLink{conv: t.conv, turnID: t.id, replyTo: t.userMsgID, speaker: agent.ID, loc: t.loc, requester: t.author}
+	link := &chatLink{conv: t.conv, turnID: t.id, replyTo: t.userMsgID, speaker: agent.ID, loc: t.loc, requester: t.author, helpersFree: t.helpersFree != ""}
 	if route.Consult != nil && agent.Role != "assistant" {
 		link.reassignFrom, link.reassignTo = agent.ID, route.Consult.AgentID
 	}
@@ -1077,6 +1090,9 @@ type chatLink struct {
 	requester                           string // the person who asked in the chat ("" without identity)
 	// reassignFrom declined the work (outside their role): their tasks go to reassignTo.
 	reassignFrom, reassignTo string
+	// helpersFree: the person asked for helpers without a position (helpers:true in the office chat): the request is
+	// coordinated by speaker and the split is attempted whatever its plan says (helpers_propose.go).
+	helpersFree bool
 }
 
 type chatLinkKey struct{}
