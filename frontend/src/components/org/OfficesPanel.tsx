@@ -23,8 +23,12 @@ const badgeCls: Record<string, string> = {
  * org chart's departments that are not an office yet (they work in General); an admin can give one its own space.
  * Nothing changes in the data: a department is an office without a space of its own.
  */
-export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewDept, actions, focusDepartments = false }: {
+export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewDept, actions, focusDepartments = false, officeId, only }: {
   people: PersonRef[]; onChanged?: () => void;
+  /** the page of one office: only that office's card (its people, visibility, memory), nothing else */
+  officeId?: string;
+  /** `rest`: the list page already shows the offices as cards, so only the departments without a space and the person's own memory */
+  only?: "rest";
   /** every department of the org chart (parents first), for the "without a space yet" part */
   depts?: ChartDept[];
   onEditDept?: (id: string) => void; onNewDept?: () => void;
@@ -66,6 +70,22 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
   const offices = data ? sortOffices(data.offices) : [];
   const editable = new Set(depts.map((d) => d.id));
 
+  if (officeId) {
+    const o = data?.offices.find((x) => x.id === officeId);
+    return (
+      <div data-testid="offices-panel">
+        {error && <div role="alert" data-testid="offices-error" className="text-[12px] font-semibold text-red-600">{error} {!data && <button type="button" onClick={load} className="underline">{t("org.retry")}</button>}</div>}
+        {!data && !error && <div className="text-sm text-mute">{t("org.loading")}</div>}
+        {data && o && (
+          <ul><OfficeCard o={o} people={people} admin={data.me.admin} meId={data.me.user_id} busy={busy} run={run} onMemory={() => setMemoryOf(o.id)}
+            onSaveTemplate={o.can_enter && o.can_manage ? () => setSaveOf(o.id) : undefined} /></ul>
+        )}
+        {saveOf && o && <SaveTemplatePanel officeId={o.id} officeName={o.general ? t("offices.general") : o.name} onClose={() => setSaveOf(null)} />}
+        {memoryOf && o && <TeamMemory scope="office" refId={o.id} title={t("offices.memoryOf", { name: o.name })} onClose={() => setMemoryOf(null)} />}
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-5" data-testid="offices-panel">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -77,7 +97,7 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
       </div>
       {error && <div role="alert" data-testid="offices-error" className="text-[12px] font-semibold text-red-600">{error} {!data && <button type="button" onClick={load} className="underline">{t("org.retry")}</button>}</div>}
 
-      <section data-testid="offices-with-space" className="grid gap-2">
+      {only !== "rest" && <section data-testid="offices-with-space" className="grid gap-2">
         <SectionTitle title={t("org.offices.withSpace")} count={data ? offices.length : undefined} hint={t("org.offices.withSpaceHint")} />
         {!data && !error && <div className="text-sm text-mute">{t("org.loading")}</div>}
         {data && (
@@ -93,7 +113,7 @@ export function OfficesPanel({ people, onChanged, depts = [], onEditDept, onNewD
           const o = data.offices.find((x) => x.id === saveOf);
           return o ? <SaveTemplatePanel officeId={o.id} officeName={o.general ? t("offices.general") : o.name} onClose={() => setSaveOf(null)} /> : null;
         })()}
-      </section>
+      </section>}
 
       {/* the old "Estructura" tab: same test ids, so old links and tests still find it */}
       <section ref={deptsRef} data-testid="org-tab-departments" className="grid scroll-mt-4 gap-2">

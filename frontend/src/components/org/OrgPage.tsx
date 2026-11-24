@@ -5,17 +5,19 @@ import { fmtDateTime, fmtUsd, useT } from "@/lib/i18n";
 import { orgChartApi, type Chart } from "@/lib/orgChartApi";
 import { AGENT_SECTIONS, OFFICE_TABS, resolveOrgTab, type AgentSection, type OrgTab } from "@/lib/orgTabsLogic";
 import { PageHeader } from "../nav/ui2";
-import { HireFromTemplateDialog } from "../admin/HireFromTemplateDialog";
+import { AgentsList } from "../agents/AgentsList";
+import { HireWizard } from "../agents/HireWizard";
 import { IndustryTemplates } from "../templates/IndustryTemplates";
 import { Modal } from "../templates/Modal";
-import { AgentDirectory } from "./AgentDirectory";
 import { AgentRoleEditor } from "./AgentRoleEditor";
 import { DelegationPanel } from "./DelegationPanel";
 import { DepartmentEditor } from "./DepartmentEditor";
 import { OfficesPanel } from "./OfficesPanel";
+import { OfficeCards } from "../offices/OfficeCards";
 import { OrgChartTree } from "./OrgChartTree";
 import { PersonEditor } from "./PersonEditor";
 import { allDepts, allMembers, btnGhost, btnPrimary, type MemberAt } from "./shared";
+import { baseOffice, officeLabel } from "@/lib/agentOfficesLogic";
 import { useViewAll } from "@/lib/viewMode";
 import { SIMPLE_ORG_TABS, splitTabs } from "@/lib/viewModeLogic";
 import { MoreButton } from "../nav/ViewAll";
@@ -54,8 +56,10 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
   const [dept, setDept] = useState<string | null | undefined>(undefined); // undefined = closed, null = new
   const [agent, setAgent] = useState<string | null>(null);
   const [person, setPerson] = useState<string | null>(null);
-  const [hire, setHire] = useState(false);
+  const [hire, setHire] = useState(search.get("hire") === "1");
+  const hireOffice = search.get("office") || undefined;
   const [industries, setIndustries] = useState(false);
+  const [cardsKey, setCardsKey] = useState(0);
   const viewAll = useViewAll();
   const [more, setMore] = useState(false);
   const { isAdmin } = useViewer();
@@ -123,13 +127,16 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
               {/* "Contratar agente" */}
               {isAdmin && <button type="button" data-testid="org-hire" onClick={() => setHire(true)} className={btnPrimary}>{t("hire.open")}</button>}
             </div>
-            {section === "directory" && <AgentDirectory people={people} />}
+            {section === "directory" && <AgentsList />}
             {section === "roles" && <AgentRoles agents={agents} onOpen={setAgent} />}
           </div>
         )}
         {chart && !gallery && scope === "offices" && tab === "offices" && (
-          <OfficesPanel people={people} onChanged={load} depts={depts} onEditDept={setDept} onNewDept={() => setDept(null)} focusDepartments={focusDepts}
-            actions={<button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>} />
+          <div className="grid gap-6">
+            <section aria-label={t("nav.offices")}><OfficeCards refresh={cardsKey} /></section>
+            <OfficesPanel only="rest" people={people} onChanged={() => { load(); setCardsKey((k) => k + 1); }} depts={depts} onEditDept={setDept} onNewDept={() => setDept(null)} focusDepartments={focusDepts}
+              actions={<button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>} />
+          </div>
         )}
         {chart && !gallery && scope === "offices" && tab === "chart" && <OrgChartTree chart={chart} onDept={setDept} onAgent={setAgent} onPerson={setPerson} onNewDept={() => setDept(null)} />}
         {chart && !gallery && scope === "offices" && tab === "delegation" && <DelegationPanel chart={chart} />}
@@ -137,7 +144,7 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
       {chart && dept !== undefined && <DepartmentEditor deptId={dept} chart={chart} onClose={() => setDept(undefined)} onSaved={saved} />}
       {chart && agent && <AgentRoleEditor agentId={agent} chart={chart} onClose={() => setAgent(null)} onSaved={saved} />}
       {chart && person && <PersonEditor userId={person} chart={chart} onClose={() => setPerson(null)} onSaved={saved} />}
-      {hire && <HireFromTemplateDialog onClose={() => { setHire(false); load(); }} />}
+      {hire && <HireWizard officeId={hireOffice} onClose={() => { setHire(false); load(); }} />}
       {industries && (
         <Modal title={t("org.offices.industries")} onClose={() => { setIndustries(false); load(); }} testid="org-industries" wide>
           <IndustryTemplates onDone={() => { setIndustries(false); pick("offices"); load(); }} />
@@ -161,7 +168,7 @@ function AgentRoles({ agents, onOpen }: { agents: MemberAt[]; onOpen: (id: strin
               className="flex w-full flex-wrap items-center justify-between gap-2 rounded-[10px] border border-line bg-panel px-3 py-2 text-left hover:border-accent/50">
               <span><span className="text-[13px] font-semibold">{a.name}</span> <span className="text-[11px] text-mute">{a.title}</span></span>
               <span className="flex flex-wrap items-center gap-2 text-[11px] text-mute">
-                <span>{a.dept_name || t("org.unassigned")}</span>
+                <span data-testid={`org-role-office-${a.id}`}>{officeLabel(baseOffice({ office_id: a.dept_id, office_name: a.dept_name }), t("offices.general"))}</span>
                 {a.reports_to_name && <span>{t("org.reportsToName", { name: a.reports_to_name })}</span>}
                 {a.open === undefined ? <span>{t("org.hours.always")}</span>
                   : a.open ? <span className="font-semibold text-emerald-700">{t("org.hours.open")}</span>
