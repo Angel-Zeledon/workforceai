@@ -52,10 +52,10 @@ export function AgentsList() {
 
   return (
     <div className="grid gap-4" data-testid="agent-directory">
-      <div className="flex flex-wrap items-center gap-2">
-        <input type="search" data-testid="agent-directory-search" aria-label={t("ag.search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ag.search")} className={`${inputCls} min-w-0 flex-1 sm:max-w-sm`} />
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <input type="search" data-testid="agent-directory-search" aria-label={t("ag.search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ag.search")} className={`${inputCls} w-full min-w-0 sm:flex-1`} />
         {showFilter && (
-          <select data-testid="agent-directory-office" aria-label={t("ag.filter.office")} value={officeLocal} onChange={(e) => setOffice(e.target.value)} className={`${inputCls} w-auto max-w-full`}>
+          <select data-testid="agent-directory-office" aria-label={t("ag.filter.office")} value={officeLocal} onChange={(e) => setOffice(e.target.value)} className={`${inputCls} w-full sm:w-auto sm:min-w-[13rem] sm:max-w-xs`}>
             <option value="">{t("ag.filter.all")}</option>
             {choices.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>

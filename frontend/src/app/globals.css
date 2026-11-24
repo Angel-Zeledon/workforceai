@@ -89,6 +89,8 @@ input::placeholder, textarea::placeholder { color: rgb(var(--mute) / 0.75); }
 /* Focus accesible y consistente (solo teclado) */
 :focus { outline: none; }
 :focus-visible { outline: 2px solid rgb(var(--accent)); outline-offset: 2px; border-radius: 4px; }
+/* a dialog container is focused by script (tabIndex -1) so Escape works: no ring around the whole box; its controls keep theirs */
+[tabindex="-1"]:focus-visible { outline: none; }
 input:focus-visible, textarea:focus-visible, select:focus-visible { outline: none; box-shadow: var(--ring); border-color: rgb(var(--accent)); }
 
 /* Entradas sobrias: aparición breve, sin rebotes. (Nombres antiguos conservados: ac-pop / ac-bounce.) */

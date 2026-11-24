@@ -23,6 +23,12 @@ import { btnGhost, btnPrimary, inputCls } from "../org/shared";
 /** The agent's sheet (`/agents/<id>`): four tabs that do not mix. Quién es (the profile), Dónde y para quién trabaja (base
  *  office, the others it also works in, who may ask, its position), Qué sabe hacer (skills and where each comes from) and
  *  Permisos. Each tab reuses the existing section; nothing is duplicated here. */
+/** "su oficina" / "toda la empresa" start with a capital when they stand alone in the ficha (not after a "+ ..." list). */
+function askText(text: string, kind: string, hasExtra: boolean): string {
+  if (hasExtra || (kind !== "office" && kind !== "company")) return text;
+  return text.charAt(0).toLocaleUpperCase() + text.slice(1);
+}
+
 export function AgentSheet({ id }: { id: string }) {
   return <Suspense fallback={null}><Sheet id={id} /></Suspense>;
 }
@@ -75,11 +81,11 @@ function Sheet({ id }: { id: string }) {
         {tab === "who" && (
           <div className="grid gap-4" data-testid="sheet-who">
             {agent?.description && <p className="text-[13px] leading-snug text-ink2">{agent.description}</p>}
-            <ProfileSheet id={id} />
+            <ProfileSheet id={id} part="who" />
           </div>
         )}
         {tab === "where" && <WhereTab id={id} />}
-        {tab === "skills" && <div data-testid="sheet-skills"><AgentSkillsCard id={id} /></div>}
+        {tab === "skills" && <div className="grid gap-4" data-testid="sheet-skills"><ProfileSheet id={id} part="tags" /><AgentSkillsCard id={id} /></div>}
         {tab === "perms" && (
           <div className="grid gap-4" data-testid="sheet-perms">
             <PermissionsSection id={id} />
@@ -180,7 +186,7 @@ function WhereTab({ id }: { id: string }) {
 
       <section aria-labelledby="where-asks" className="border-b border-line pb-4" data-testid="where-asks">
         <h2 id="where-asks" className="text-[14px] font-semibold">{t("ag.where.asks")}</h2>
-        <p className="mt-1 text-[13px]">{t(`ag.asks.${who.kind}`, { n: who.people })}{who.extra.length > 0 && ` + ${who.extra.join(", ")}`}</p>
+        <p className="mt-1 text-[13px]">{askText(t(`ag.asks.${who.kind}`, { n: who.people }), who.kind, who.extra.length > 0)}{who.extra.length > 0 && ` + ${who.extra.join(", ")}`}</p>
         {entry.departed && <p className="text-[12px] font-semibold text-amber-700">{t("offices.dir.departed")}</p>}
         {entry.rights.edit && <button type="button" data-testid="where-asks-edit" onClick={() => setAccess(true)} className={`${btnGhost} mt-2`}>{t("ag.where.asks.change")}</button>}
       </section>
