@@ -4,6 +4,7 @@ import { useT } from "@/lib/i18n";
 import { useAgentName } from "../../ui";
 import { Icon } from "../../icons";
 import { useHelpers } from "@/lib/helpers";
+import { doneOf, groupPct } from "@/lib/helpersLogic";
 import { HelperProgress } from "../../helpers/HelperProgress";
 import type { RunRow, StepKind } from "./workspaceLogic";
 
@@ -23,9 +24,13 @@ export function RunBlock({ row, collapsible = false, defaultOpen = true }: { row
   const helperGroup = useHelpers((s) => (s.enabled ? Object.values(s.groups).filter((g) => g.request_id === row.id && g.status !== "declined" && g.status !== "proposed").pop() : undefined));
   const shown = !collapsible || open;
   const waiting = row.steps.some((s) => s.kind === "waiting");
-  const status = row.status === "planning" && row.total === 0 ? t("work.run.planning")
-    : row.status === "paused" ? t("work.run.paused")
+  // with helpers launched, the progress is the parts' (the plan's own steps do not move until they are done)
+  const parts = helperGroup ? doneOf(helperGroup) : null;
+  const pct = helperGroup ? groupPct(helperGroup) : row.pct;
+  const status = row.status === "paused" ? t("work.run.paused")
     : waiting ? t("work.run.waitingYou")
+    : parts ? t("helpers.run.partsOf", { done: parts.done, total: parts.total })
+    : row.status === "planning" && row.total === 0 ? t("work.run.planning")
     : row.total ? t("work.run.progress", { done: row.done, total: row.total }) : t("work.run.starting");
   const head = (
     <>
@@ -41,8 +46,8 @@ export function RunBlock({ row, collapsible = false, defaultOpen = true }: { row
       {collapsible ? (
         <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="flex min-h-11 w-full items-start gap-2 rounded-[10px] px-3 py-2.5 text-left hover:bg-panel2">{head}</button>
       ) : <div className="flex items-start gap-2 px-3 pt-2.5">{head}</div>}
-      <div className="mx-3 mt-2 h-1 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={row.pct} aria-label={t("work.run.progressAria")}>
-        <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${row.pct}%` }} />
+      <div className="mx-3 mt-2 h-1 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={t("work.run.progressAria")}>
+        <div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} />
       </div>
       {shown && row.steps.length > 0 && (
         <ol className="space-y-1.5 px-3 pb-3 pt-2.5">

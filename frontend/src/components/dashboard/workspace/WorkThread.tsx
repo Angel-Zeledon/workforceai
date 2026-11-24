@@ -9,7 +9,7 @@ import { BlockBoundary } from "./BlockBoundary";
 import { Composer } from "./Composer";
 import { RunBlock } from "./RunBlock";
 import { composerHidden, convOf, exampleRoles, inProgress, OFFICE_CONV, type PanelLayout } from "./workspaceLogic";
-import { HelperProposal, useProposals } from "../../helpers/HelperProposal";
+import { HelperProposal, useProposals, useProposedRequests } from "../../helpers/HelperProposal";
 
 const KNOWN_ROLES = new Set(["sales", "analyst", "accounting", "hr", "legal", "operations", "assistant"]);
 const NO_MSGS: never[] = [];
@@ -74,8 +74,10 @@ export function WorkThread({ target, onTarget, autoFocus, layout = "none", openA
   const setDraft = useStore((s) => s.setDraft);
   const conv = convOf(target);
   const proposals = useProposals();
+  const proposed = useProposedRequests();
   useEffect(() => { loadChat(OFFICE_CONV); }, [loadChat]);
-  const running = useMemo(() => inProgress(requests, Object.values(tasks), { agent: target }).slice(0, 2), [requests, tasks, target]);
+  // a request whose helpers wait for the answer shows its proposal, not its run block
+  const running = useMemo(() => inProgress(requests, Object.values(tasks), { agent: target }).filter((r) => !proposed.has(r.id)).slice(0, 2), [requests, tasks, target, proposed]);
   const empty = loaded && target === null && office.length === 0 && Object.keys(requests).length === 0;
   const teamSize = useStore((s) => s.agentOrder.length);
   const first = useStore((s) => (target ? (s.agents[target]?.name ?? "").split(" ")[0] : ""));
@@ -99,7 +101,8 @@ export function WorkThread({ target, onTarget, autoFocus, layout = "none", openA
             </BlockBoundary>
           </>
         )}
-      {loaded && proposals.length > 0 && (
+      {/* the whole proposal is in the office conversation; the panel shows a pointer to it while this conversation is on screen */}
+      {loaded && target === null && proposals.length > 0 && (
         <div data-testid="work-proposals" className="max-h-[46%] shrink-0 space-y-2 overflow-y-auto border-t border-line px-3 py-2 md:px-5">
           {proposals.map((g) => <div key={g.id} className="mx-auto w-full max-w-3xl"><BlockBoundary name={`helpers-${g.id}`}><HelperProposal group={g} /></BlockBoundary></div>)}
         </div>

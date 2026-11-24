@@ -75,7 +75,7 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
           {/* under the panel the conversation and its box are not reachable while the panel is open */}
           <div className="min-h-0 flex-1" inert={layout === "overlay"} aria-hidden={layout === "overlay"}>{thread}</div>
         </div>
-        <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} className="border-l border-line bg-panel" />
+        <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} compactProposals={target === null} className="border-l border-line bg-panel" />
       </div>
     );
   }
@@ -86,7 +86,7 @@ export function WorkSpace({ picked, setPicked, onOpenReport, onOpenPanel, openDe
       {live}
       <BlockBoundary name="team"><TeamRail target={target} onPick={pick} onPanel={onOpenPanel} className="border-r border-line bg-panel" /></BlockBoundary>
       <div className="min-h-0 min-w-0">{thread}</div>
-      {layout === "gap" ? <div data-testid="work-panel-gap" aria-hidden className="min-h-0" /> : <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} className="border-l border-line bg-panel" />}
+      {layout === "gap" ? <div data-testid="work-panel-gap" aria-hidden className="min-h-0" /> : <WorkPanel onOpenReport={onOpenReport} openDecisions={openDecisions} compactProposals={target === null} className="border-l border-line bg-panel" />}
     </div>
   );
 }

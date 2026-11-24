@@ -10,7 +10,7 @@ import { Icon } from "../../icons";
 import { Loading, timeAgo, useAgentName } from "../../ui";
 import { BlockBoundary } from "./BlockBoundary";
 import { RunBlock } from "./RunBlock";
-import { HelperProposal, useProposals } from "../../helpers/HelperProposal";
+import { HelperProposal, ProposalPointer, useProposals, useProposedRequests } from "../../helpers/HelperProposal";
 import { inProgress, needsYouItems, readyItems } from "./workspaceLogic";
 
 /** A block of the panel: a title with its number, or a single quiet line when there is nothing in it. */
@@ -33,7 +33,7 @@ function Block({ id, title, count, empty, children }: { id: string; title: strin
 
 const NEEDS_SHOWN = 2; // the rest is one click away, so what is in motion and what is ready stay in view
 
-function NeedsBlock() {
+function NeedsBlock({ compactProposals }: { compactProposals: boolean }) {
   const { t } = useT();
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
@@ -44,7 +44,8 @@ function NeedsBlock() {
   return (
     <Block id="needs" title={t("work.panel.needs")} count={items.length + props.length} empty={t("work.panel.needs.empty")}>
       <ul className="space-y-2">
-        {props.map((g) => <li key={g.id}><BlockBoundary name={`helpers-${g.id}`}><HelperProposal group={g} compact /></BlockBoundary></li>)}
+        {/* the whole proposal is in the conversation when it is on screen; here it is a pointer to it */}
+        {props.map((g) => <li key={g.id}><BlockBoundary name={`helpers-${g.id}`}>{compactProposals ? <ProposalPointer group={g} /> : <HelperProposal group={g} />}</BlockBoundary></li>)}
         {shown.map((it) => (
           <li key={`${it.kind}:${it.id}`}>
             <BlockBoundary name={`need-${it.id}`}>
@@ -67,7 +68,8 @@ function RunningBlock() {
   const { t } = useT();
   const requests = useStore((s) => s.requests);
   const tasks = useStore((s) => s.tasks);
-  const rows = useMemo(() => inProgress(requests, Object.values(tasks)), [requests, tasks]);
+  const proposed = useProposedRequests();
+  const rows = useMemo(() => inProgress(requests, Object.values(tasks)).filter((r) => !proposed.has(r.id)), [requests, tasks, proposed]);
   return (
     <Block id="running" title={t("work.panel.running")} count={rows.length} empty={t("work.panel.running.empty")}>
       <ul className="space-y-2">
@@ -129,14 +131,14 @@ function DecidedBlock({ open }: { open: boolean }) {
 }
 
 /** Right side: what needs you (answer in place), what is in motion, and what is ready. Each block fails alone. */
-export function WorkPanel({ onOpenReport, openDecisions = false, className = "" }: { onOpenReport: () => void; openDecisions?: boolean; className?: string }) {
+export function WorkPanel({ onOpenReport, openDecisions = false, compactProposals = false, className = "" }: { onOpenReport: () => void; openDecisions?: boolean; /** the office conversation with its proposal is on screen beside the panel */ compactProposals?: boolean; className?: string }) {
   const { t } = useT();
   const loaded = useStore((s) => s.loaded);
   return (
     <aside aria-label={t("work.panel.label")} data-testid="work-panel" data-tour="dashboard.side" className={`min-h-0 overflow-y-auto pb-6 ${className}`}>
       {!loaded ? <div className="p-3"><Loading rows={3} /></div> : (
         <>
-          <BlockBoundary name="needs"><NeedsBlock /></BlockBoundary>
+          <BlockBoundary name="needs"><NeedsBlock compactProposals={compactProposals} /></BlockBoundary>
           <BlockBoundary name="running"><RunningBlock /></BlockBoundary>
           <BlockBoundary name="ready"><ReadyBlock onOpenReport={onOpenReport} /></BlockBoundary>
           <BlockBoundary name="decided"><DecidedBlock open={openDecisions} /></BlockBoundary>
