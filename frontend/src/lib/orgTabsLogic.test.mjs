@@ -1,7 +1,7 @@
 // Unit tests of "Agentes y oficinas" in 4 tabs and the translation of old links (run: npm run test:unit).
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { AGENT_SECTIONS, LEGACY_ORG_TABS, ORG_TABS, resolveOrgTab, splitBySpace } from "./orgTabsLogic.ts";
+import { AGENT_SECTIONS, LEGACY_ORG_TABS, OFFICE_TABS, ORG_TABS, orgRedirectTarget, resolveOrgTab, splitBySpace } from "./orgTabsLogic.ts";
 import { SIMPLE_ORG_TABS, splitTabs } from "./viewModeLogic.ts";
 
 test("the page has 4 tabs, Agentes first: Agentes, Oficinas, Organigrama, Reglas de delegación", () => {
@@ -30,11 +30,28 @@ test("the new names work too, with any case or spaces; unknown or empty gives nu
   assert.equal(resolveOrgTab(undefined), null);
 });
 
-test("simple mode keeps Agentes and Oficinas open; Organigrama and Reglas de delegación one click away", () => {
-  assert.deepEqual(splitTabs(ORG_TABS, SIMPLE_ORG_TABS, false), { shown: ["agents", "offices"], folded: ["chart", "delegation"] });
+test("/offices has 3 tabs (Oficinas, Organigrama, Reglas de delegación); Agentes lives on /agents", () => {
+  assert.deepEqual([...OFFICE_TABS], ["offices", "chart", "delegation"]);
+});
+
+test("simple mode keeps Oficinas open; Organigrama and Reglas de delegación one click away", () => {
+  assert.deepEqual(splitTabs(OFFICE_TABS, SIMPLE_ORG_TABS, false), { shown: ["offices"], folded: ["chart", "delegation"] });
   // a deep link to a folded tab keeps it visible
-  assert.deepEqual(splitTabs(ORG_TABS, SIMPLE_ORG_TABS, false, ["delegation"]).shown, ["agents", "offices", "delegation"]);
-  assert.deepEqual(splitTabs(ORG_TABS, SIMPLE_ORG_TABS, true).shown, [...ORG_TABS]);
+  assert.deepEqual(splitTabs(OFFICE_TABS, SIMPLE_ORG_TABS, false, ["delegation"]).shown, ["offices", "delegation"]);
+  assert.deepEqual(splitTabs(OFFICE_TABS, SIMPLE_ORG_TABS, true).shown, [...OFFICE_TABS]);
+});
+
+test("old /org links: Agentes goes to /agents (roles keeps its section), the office tabs to /offices", () => {
+  assert.equal(orgRedirectTarget(null), "/agents");
+  assert.equal(orgRedirectTarget(""), "/agents");
+  assert.equal(orgRedirectTarget("directory"), "/agents");
+  assert.equal(orgRedirectTarget("agents"), "/agents");
+  assert.equal(orgRedirectTarget("roles"), "/agents?tab=roles");
+  assert.equal(orgRedirectTarget("offices"), "/offices?tab=offices");
+  assert.equal(orgRedirectTarget("chart"), "/offices?tab=chart");
+  assert.equal(orgRedirectTarget("delegation"), "/offices?tab=delegation");
+  assert.equal(orgRedirectTarget("departments"), "/offices?tab=offices&focus=departments");
+  assert.equal(orgRedirectTarget("teams"), "/agents"); // unknown: the old first tab
 });
 
 test("splitBySpace: a department with an office of the same id has its own space; General never counts", () => {

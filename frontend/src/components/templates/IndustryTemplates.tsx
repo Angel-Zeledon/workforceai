@@ -77,7 +77,7 @@ function IndustryDetail({ ind, onClose, onDone }: { ind: Industry; onClose: () =
           {res.demo_error && <p className="text-[12px] text-red-600">{t("org.ind.demoError")}</p>}
           {onDone
             ? <button type="button" onClick={onDone} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</button>
-            : <Link href="/org?tab=offices" prefetch={false} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</Link>}
+            : <Link href="/offices" prefetch={false} data-testid="industry-open-org" className="mt-2 inline-block text-[12px] font-semibold text-accent hover:underline">{t("org.ind.openOrg")}</Link>}
         </div>
       ) : (
         <div className="grid gap-2 border-t border-line pt-3">

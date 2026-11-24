@@ -21,11 +21,9 @@ export const SECTIONS = [
   { id: "pending", href: "/needs-you", label: "nav.needsYou", icon: "bell" }, // "Te necesitan": everything that waits for you
   { id: "chats", href: "/chats", label: "nav.chats", icon: "chat" },
   { id: "projects", href: "/projects", label: "nav.projects", icon: "flag" },
-  // >>> org
-  { id: "org", href: "/org", label: "nav.org", icon: "users" },
-  // <<< org
+  { id: "offices", href: "/offices", label: "nav.offices", icon: "office" }, // oficinas, organigrama, reglas, equipos listos
+  { id: "agents", href: "/agents", label: "nav.agents", icon: "bot" }, // directorio de agentes y puestos
   { id: "goals", href: "/goals", label: "nav.goals", icon: "checkbox" },
-  { id: "teams", href: "/teams", label: "nav.teams", icon: "users" }, // F2: ready-to-hire teams
   { id: "customers", href: "/clients", label: "nav.customers", icon: "briefcase" },
   { id: "drive", href: "/files", label: "nav.drive", icon: "folder" },
   { id: "meetings", href: "/meetings", label: "nav.meetings", icon: "calendar" }, // meetings
@@ -34,7 +32,7 @@ export const SECTIONS = [
   { id: "shop", href: "/shop", label: "nav.shop", icon: "bag" },
   { id: "settings", href: "/settings", label: "nav.settings", icon: "settings" },
   // company accounts only (D2): the department's own Drive
-  { id: "department", href: "/d", label: "nav.department", icon: "folder" },
+  { id: "department", href: "/d", label: "nav.department", icon: "folder" }, // "Archivos de la oficina"
 ] as const;
 export type Section = (typeof SECTIONS)[number];
 export type SectionId = Section["id"] | "dashboard";
@@ -42,13 +40,13 @@ export type SectionId = Section["id"] | "dashboard";
 /** The grouped menu (proposal 5.2): what you do every day, your company, what agents know and use; extras at the bottom. */
 export const NAV_GROUPS: { id: "day" | "company" | "teach" | "bottom"; label: string | null; items: Section["id"][] }[] = [
   { id: "day", label: "nav.group.day", items: ["office", "pending", "chats", "projects"] },
-  { id: "company", label: "nav.group.company", items: ["org", "goals", "teams", "customers", "drive", "meetings"] },
+  { id: "company", label: "nav.group.company", items: ["offices", "agents", "goals", "customers", "drive", "meetings"] },
   { id: "teach", label: "nav.group.teach", items: ["skills", "connections"] },
   { id: "bottom", label: null, items: ["shop", "settings"] },
 ];
 
 /** Company accounts: a short menu led by their department; everything else folds under "More". */
-const COMPANY_MAIN: Section["id"][] = ["department", "pending", "org", "settings"];
+const COMPANY_MAIN: Section["id"][] = ["department", "pending", "offices", "agents", "settings"];
 
 /** The menu groups with their sections; the shop only where the rewards system is on. */
 export function navGroups({ shopAvailable, company = false }: { shopAvailable: boolean; company?: boolean }) {
@@ -69,8 +67,8 @@ export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/approvals") || pathname.startsWith("/needs-you")) return "pending";
   if (pathname.startsWith("/chats")) return "chats";
   if (pathname.startsWith("/projects")) return "projects";
-  if (pathname.startsWith("/org")) return "org"; // >>> org <<<
-  if (pathname.startsWith("/teams")) return "teams";
+  if (pathname.startsWith("/offices") || pathname.startsWith("/teams")) return "offices"; // /teams is now inside Oficinas
+  if (pathname.startsWith("/agents") || pathname.startsWith("/org")) return "agents"; // /org is now Agentes or Oficinas
   if (pathname.startsWith("/goals")) return "goals";
   if (pathname.startsWith("/clients")) return "customers";
   if (pathname.startsWith("/meetings")) return "meetings"; // meetings
@@ -80,4 +78,13 @@ export function sectionOf(pathname: string): SectionId {
   if (pathname.startsWith("/shop")) return "shop";
   if (pathname.startsWith("/settings")) return "settings";
   return "office";
+}
+
+/**
+ * Where the old `/teams` address lands: the same query on `/offices`, where the ready-to-hire teams gallery now lives
+ * (`?team=`, `?pack=`, `?template=` keep opening the same preview).
+ */
+export function teamsRedirectTarget(search: string): string {
+  const q = search.replace(/^\?/, "");
+  return q ? `/offices?${q}` : "/offices";
 }

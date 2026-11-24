@@ -150,7 +150,7 @@ export function OfficeTemplatePreviewPanel({ id, onBack, onChanged }: { id: stri
               className="min-h-10 rounded-md bg-accent px-5 py-2 text-xs font-semibold text-white hover:bg-accent-hover disabled:opacity-50 sm:min-h-0">
               {busy ? t("teams.hire.busy") : t("otpl.install.button")}
             </button>
-            {note?.ok && <button type="button" onClick={() => go("/org")} className="min-h-10 rounded-md border border-line px-4 py-2 text-xs font-semibold text-ink2 hover:bg-panel2 sm:min-h-0">{t("teams.seeAgents")}</button>}
+            {note?.ok && <button type="button" onClick={() => go("/agents")} className="min-h-10 rounded-md border border-line px-4 py-2 text-xs font-semibold text-ink2 hover:bg-panel2 sm:min-h-0">{t("teams.seeAgents")}</button>}
             {!confirmDelete
               ? <button type="button" data-testid="otpl-delete" disabled={busy} onClick={() => setConfirmDelete(true)} className="ml-auto text-[12px] text-mute hover:text-red-600 hover:underline">{t("otpl.delete")}</button>
               : <button type="button" data-testid="otpl-delete-confirm" disabled={busy} onClick={() => void remove()} className="ml-auto rounded-md border border-red-300 px-3 py-1.5 text-[12px] font-semibold text-red-600 hover:bg-red-50">{t("otpl.deleteConfirm")}</button>}
