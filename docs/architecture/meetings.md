@@ -39,6 +39,8 @@ into tasks by an explicit human step.
 (calendar provider, connection, event id, last sync error, briefing request id), timestamps. The API adds
 `has_minutes` and `embeddable`.
 
+Since migration 835 a meeting also keeps `office_id`: the office of the request or conversation it was created from (empty means none). The requests its tasks start are asked from that office. A meeting created from a private office is seen only by that office's members and by its organizer (`seesMeeting` in `internal/api/meetings.go`).
+
 ### State machine (`internal/meetings/state.go`)
 
 ```
@@ -190,7 +192,7 @@ GET|POST /meetings/feeds   DELETE /meetings/feeds/{id}
 GET    /calendar/feed/{token}.ics                   (public)
 ```
 
-## Storage (migrations 740, 741; down files in `backend/migrations/down`)
+## Storage (migrations 740, 741, 835; down files in `backend/migrations/down`)
 
 `meetings` (attendees, agenda and external as jsonb, `CHECK (ends_at > starts_at)`, status check), `meeting_minutes`
 (foreign key to `meetings`), `meeting_settings`, `calendar_feeds` (unique `(org_id, token_hash)`). All have RLS
