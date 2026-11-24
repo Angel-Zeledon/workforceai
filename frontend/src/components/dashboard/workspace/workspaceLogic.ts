@@ -60,7 +60,7 @@ export function needsYouItems(approvals: { id: string; status: string; created_a
   return out.sort((x, y) => +new Date(x.created_at) - +new Date(y.created_at));
 }
 
-export interface TaskLike { id: string; request_id: string; agent_id: string; status: string; title: string; created_at: string; /** a part of a helper group: it is shown by the helpers block, not as a step */ helper?: unknown }
+export interface TaskLike { id: string; request_id: string; agent_id: string; status: string; title: string; created_at: string; /** a part of a helper group: it is shown by the helpers block, not as a step */ helper?: { index?: number } | null }
 export interface RequestLike { id: string; text: string; status: string; created_at: string }
 
 const OPEN_REQUEST = new Set(["planning", "running", "awaiting_approval", "awaiting_confirmation", "paused"]);
