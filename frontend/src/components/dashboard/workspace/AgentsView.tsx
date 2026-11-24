@@ -6,6 +6,7 @@ import { stateMeta } from "@/lib/meta";
 import { useAgentView } from "@/lib/preferences";
 import { Avatar } from "../../chat/ChatThread";
 import { Empty, Progress, readable } from "../../ui";
+import { useOfficeAgentIds } from "@/lib/currentOffice";
 
 function Row({ id, onTalk }: { id: string; onTalk: (id: string) => void }) {
   const { t } = useT();
@@ -44,7 +45,7 @@ function Row({ id, onTalk }: { id: string; onTalk: (id: string) => void }) {
 /** Agentes: one row per agent with what it is doing, its numbers and the two things you do with it (talk, open its panel). */
 export function AgentsView({ onTalk }: { onTalk: (id: string) => void }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds(); // the agents of the office on screen
   if (!order.length) return <Empty>{t("work.agents.none")}</Empty>;
   return (
     <ul data-testid="agents-view" className="mx-auto w-full max-w-4xl divide-y divide-line overflow-hidden rounded-[10px] border border-line bg-panel">

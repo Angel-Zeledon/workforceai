@@ -114,6 +114,8 @@ export interface ProjectSummary {
   tasks_done: number; tasks_total: number; running: number; awaiting: number; failed: number;
   /** the batch (one template for many customers) the project belongs to */
   batch_id?: string;
+  /** Office it belongs to (absent = General). */
+  office_id?: string;
   /** F1: the company goal it contributes to (older backends omit it) */
   goal_id?: string;
   /** tasks whose agent asked a person and waits for the answer (older backends omit it) */

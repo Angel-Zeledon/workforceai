@@ -17,6 +17,8 @@ import { batchApi, useBatchUi, type BatchSummary } from "@/lib/projects/batchApi
 import { LightDot, StatusPill, STATUS_COLOR, fmtMoney } from "./shared";
 import { useTplText } from "./templateUi";
 import { ConceptHelp } from "../concepts/ConceptHelp";
+import { useCurrentOffice } from "@/lib/currentOffice";
+import { inOffice } from "@/lib/currentOfficeLogic";
 
 /** "Projects" screen: cards with progress, or the detail of the selected project. `/projects?view=library` opens the
  *  single template library (quick requests + projects; `&kind=quick|project` picks the filter), the home of what used
@@ -67,7 +69,8 @@ function ProjectList() {
   const openBatch = useBatchUi((s) => s.open);
   useEffect(() => { batchApi.list().then(setBatches).catch(() => setBatches([])); }, []);
   // the projects of a batch are shown inside its card, not one by one
-  const list = Object.values(projects).filter((p) => !p.batch_id).sort((a, b) => b.created_at.localeCompare(a.created_at));
+  const { current } = useCurrentOffice(); // the projects of the office on screen
+  const list = Object.values(projects).filter((p) => !p.batch_id && inOffice(current, p.office_id)).sort((a, b) => b.created_at.localeCompare(a.created_at));
   return (
     <div className="mx-auto max-w-[1180px] space-y-4 p-4 sm:space-y-6 md:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

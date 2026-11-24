@@ -40,6 +40,7 @@ import type { RequestAudit, TaskAudit } from "../auditLogic";
 import { demoEvidence } from "./evidence-mock";
 import type { ReportEvidence } from "../evidenceLogic";
 import { MockDebates } from "./debates-mock";
+import { mockOfficeWorld } from "./agent-offices-mock";
 
 /** Card of the draft an agent leaves on its desk after a task (the mock drive creates the same path). */
 const draftRef = (agentId: string, title: string): FileRef => {
@@ -199,7 +200,7 @@ export class MockBackend {
     emit: (t, p, a) => this.emit(t, p, a), wait: (ms) => this.wait(ms), agent: (id) => this.agents.find((a) => a.id === id), agents: () => this.agents,
     setState: (id, st, act, tid, pr) => this.setState(id, st, act, tid, pr), log: (a, k, t) => this.log(a, k, t),
     planPreview: (text) => buildPlan(text).map((s) => ({ key: s.key, agent: s.agent, title: s.title })),
-    draftOf: (id) => this.draftOf(id), startRequest: (text) => this.startRequest(text), startDirectTask: (id, text, reason) => this.startDirectTask(id, text, reason), uid,
+    draftOf: (id) => this.draftOf(id), startRequest: (text, office) => this.startRequest(text, false, office), startDirectTask: (id, text, reason, office) => this.startDirectTask(id, text, reason, office), uid,
   }); // chat routing: POST /messages, chat.* and route.decided
   private hist = new MockChatHistory({
     chat: () => this.chat.all(), requestConvs: () => this.conversations, requestMessages: (id) => this.messages[id] || [], agents: () => this.agents,
@@ -381,10 +382,10 @@ export class MockBackend {
   private emitTask(type: string, t: Task) { this.emit(type, { task: { ...t }, ...(type === "task.created" && t.assigned_reason ? { assigned_reason: t.assigned_reason } : {}) }, t.agent_id); this.art.onTask(type, t); }
 
   // ---- orchestrator -------------------------------------------------------------------------
-  private async startRequest(raw: string, rehearsal = false): Promise<string> {
+  private async startRequest(raw: string, rehearsal = false, office?: string): Promise<string> {
     const want = MockDebates.wants(raw);
     const text = MockDebates.strip(raw); // the [[debate]] marker is an instruction to the backend, not part of the request
-    const req: Request = { id: uid("req"), text, status: "planning", created_at: nowIso(), report_id: null, cost_usd: 0 };
+    const req: Request = { id: uid("req"), text, status: "planning", created_at: nowIso(), report_id: null, cost_usd: 0, ...(office ? { office_id: office } : {}) };
     if (want.marked || want.decision) this.debateWanted.set(req.id, want);
     this.requests.unshift(req);
     if (rehearsal) this.rehearsal.markRequest(req.id); // B9: nothing this request would send is sent
@@ -410,9 +411,9 @@ export class MockBackend {
   }
 
   /** Task asked in an agent's own 1:1 chat: only that agent works on it. Resolves with the summary. */
-  private async startDirectTask(agentId: string, text: string, reason?: string): Promise<string> {
+  private async startDirectTask(agentId: string, text: string, reason?: string, office?: string): Promise<string> {
     const title = tr("mock.direct.title", { text: text.slice(0, 48) });
-    const req: Request = { id: uid("req"), text, status: "running", created_at: nowIso(), report_id: null, cost_usd: 0 };
+    const req: Request = { id: uid("req"), text, status: "running", created_at: nowIso(), report_id: null, cost_usd: 0, ...(office ? { office_id: office } : {}) };
     this.requests.unshift(req);
     this.emit("request.received", { request_id: req.id, text });
     const spec: TaskSpec = {
@@ -424,6 +425,7 @@ export class MockBackend {
       id: uid("task"), request_id: req.id, workflow_id: null, title, description: spec.desc, agent_id: agentId, status: "pending",
       depends_on: [], parent_task_id: null, created_at: nowIso(), started_at: null, finished_at: null, output: null,
       assigned_reason: reason || tr("mock.reason.direct"),
+      ...(office ? { office_id: office } : {}),
     };
     this.specs.set(task.id, spec); this.tasks.push(task);
     this.emit("plan.created", { request_id: req.id, tasks: [{ id: task.id, title, agent_id: agentId, depends_on: [] }] }, agentId);
@@ -456,6 +458,7 @@ export class MockBackend {
         id: uid("task"), request_id: req.id, workflow_id: null, title: s.title, description: s.desc, agent_id: s.agent, status: "pending",
         depends_on: [], parent_task_id: null, created_at: nowIso(), started_at: null, finished_at: null, output: null,
         assigned_reason: tr(`mock.reason.${s.key}`),
+        ...(req.office_id ? { office_id: req.office_id } : {}),
       };
       keyToId.set(s.key, t.id); this.specs.set(t.id, s);
       return t;
@@ -633,6 +636,7 @@ export class MockBackend {
       const ap: Approval = {
         id: uid("appr"), task_id: task.id, agent_id: id, action: spec.approval.action, title: spec.approval.title,
         details: spec.approval.details, risk: spec.approval.risk, status: "pending", created_at: nowIso(), resolved_at: null,
+        ...(req.office_id ? { office_id: req.office_id } : {}),
       };
       this.approvals.unshift(ap);
       task.status = "awaiting_approval";
@@ -823,7 +827,7 @@ export class MockBackend {
       if ((r0 === "messages" && !r1 || r0 === "requests") && body?.goal_id) this.goals.assertLinkable(String(body.goal_id)); // F1
       if (r0 === "messages" && !r1 && body?.customer_id && !this.customers.hasCustomer(String(body.customer_id))) throw new Error("customer not found"); // B12
       if (r0 === "messages" && !r1) this.helpers.note(String(body?.text || ""), Array.isArray(body?.attachments) ? body.attachments.length : 0, body?.helpers === true);
-      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : [], body?.helpers === true);
+      if (r0 === "messages" && !r1) return this.chat.post(String(body?.conversation || "office"), String(body?.text || "").trim(), Array.isArray(body?.attachments) ? body.attachments.map(String) : [], body?.helpers === true, body?.office_id ? String(body.office_id) : undefined);
       if (r0 === "requests") {
         const cid = body?.customer_id ? String(body.customer_id) : "";
         if (cid && !this.customers.hasCustomer(cid)) throw new Error("customer not found");
@@ -871,6 +875,7 @@ export class MockBackend {
         this.initiatives.reset();
         this.stalls.reset();
         this.decisions.clear();
+        mockOfficeWorld.reset(); // the demo's offices, who works where and the invitations go back to how they started
         this.seed();
         this.emit("hello", { agents: this.agents, helpers_enabled: true, helper_groups: this.helpers.all() });
         this.pushMetrics();

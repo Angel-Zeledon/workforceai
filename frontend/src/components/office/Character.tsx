@@ -1,4 +1,5 @@
 "use client";
+import { useVisitKey } from "@/lib/visitDesks";
 import { useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import { Billboard } from "@react-three/drei";
@@ -109,7 +110,8 @@ export function Character({ id, index }: { id: string; index: number }) {
   const meta = { ...roleMeta(agent0?.role), color: view.color, skin: view.skin, hairStyle: view.hairStyle, accessory: view.accessory };
   // a desk moved in the office editor: the character walks to its new place
   const deskCfg = useOfficeLayout((s) => effective(s).desks[id]);
-  const desk = useMemo(() => deskOf({ id, role: agent0?.role || "" }, index), [id, agent0?.role, index, deskCfg?.x, deskCfg?.z]); // eslint-disable-line react-hooks/exhaustive-deps
+  const visitKey = useVisitKey(id); // "" unless the agent visits the office on screen
+  const desk = useMemo(() => deskOf({ id, role: agent0?.role || "" }, index), [id, agent0?.role, index, deskCfg?.x, deskCfg?.z, visitKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const own = useMemo(() => ({ seat: seatOf(desk), stand: standOf(desk) }), [desk]);
 
   const root = useRef<THREE.Group>(null!);

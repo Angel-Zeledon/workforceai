@@ -7440,5 +7440,13 @@
   "ofp.skills.library": "Abrir la biblioteca de habilidades",
   "ofp.files.hint": "Los archivos de la oficina y lo que otras oficinas comparten con ella.",
   "ofp.files.open": "Abrir los archivos de la oficina",
-  "ofp.memory.hint": "Lo que sus agentes tienen presente al trabajar para esta oficina."
+  "ofp.memory.hint": "Lo que sus agentes tienen presente al trabajar para esta oficina.",
+  "office.select.all": "Todas mis oficinas",
+  "office.select.label": "Oficina",
+  "office.select.closed": "privada, cerrada",
+  "office.select.sendTo": "Oficina:",
+  "office.select.sendHint": "Este mensaje va a la oficina {name}",
+  "office.busyIn": "ocupado en {name}",
+  "office.busyElsewhere": "ocupado en otra oficina",
+  "work.team.hire": "Contratar"
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useBusyElsewhere } from "@/lib/currentOffice";
 import { useEffect, useMemo, useState } from "react";
 import { useStore, type Link } from "@/lib/store";
 import { stateMeta } from "@/lib/meta";
@@ -39,11 +40,12 @@ function AgentTag({ id }: { id: string }) {
   const meta = { color: view.color };
   const scale = labelSize === "s" ? 0.85 : labelSize === "l" ? 1.2 : 1;
   const sm = stateMeta(agent.state);
+  const away = useBusyElsewhere(id); // "ocupado en Legal" when its work is for another office
   const showEnergyChip = !!energy && (energy.paused || energy.level !== "ok");
   const exp = selected || hover;
   const busy = ["working", "reviewing", "thinking", "awaiting_approval"].includes(agent.state) && agent.progress > 0;
   const attention = ["awaiting_approval", "error", "blocked", "completed"].includes(agent.state);
-  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10) + (prog ? 58 : 0) + (showEnergyChip ? 62 : 0) + (rehearsing ? 54 : 0)) * scale;
+  const fw = (52 + (showNames ? view.label.length * 7.4 : 0) + (agent.state === "idle" ? 0 : sm.label.length * 5.6 + 10) + (prog ? 58 : 0) + (showEnergyChip ? 62 : 0) + (rehearsing ? 54 : 0) + (away.kind !== "none" ? 96 : 0)) * scale;
   return (
     <div
       ref={ref}
@@ -104,6 +106,7 @@ function AgentTag({ id }: { id: string }) {
               </span>
             )}
             {showEnergyChip && <span className="group-data-[tier=mini]:hidden"><EnergyBar id={id} compact /></span>}
+            {away.kind !== "none" && <span data-testid={`office-busy-${id}`} className="rounded-full bg-panel2 px-1.5 py-[2px] text-[9px] font-semibold leading-none text-ink2 group-data-[tier=mini]:hidden">{away.kind === "named" ? t("office.busyIn", { name: away.name }) : t("office.busyElsewhere")}</span>}
             {rehearsing && <span data-testid={`office-rehearsal-chip-${id}`} className="rounded-full bg-accent-soft px-1.5 py-[2px] text-[9px] font-semibold uppercase leading-none tracking-wide text-accent group-data-[tier=mini]:hidden">{t("rehearsal.badge")}</span>}
           </div>
         )}

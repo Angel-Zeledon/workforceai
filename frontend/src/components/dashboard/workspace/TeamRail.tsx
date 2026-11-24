@@ -8,6 +8,9 @@ import { Avatar } from "../../chat/ChatThread";
 import { Icon } from "../../icons";
 import { readable } from "../../ui";
 import { groupAgents, needsYouAgentIds, type RailGroup } from "./workspaceLogic";
+import Link from "next/link";
+import { useCurrentOffice, useOfficeAgentIds } from "@/lib/currentOffice";
+import { ALL_OFFICES } from "@/lib/currentOfficeLogic";
 
 const SEARCH_FROM = 8; // with many agents a search box appears
 
@@ -42,12 +45,25 @@ function AgentRow({ id, active, waiting, onPick, onPanel }: { id: string; active
   );
 }
 
+/** "Contratar": to the hiring flow of the office on screen (none picked with "Todas mis oficinas"). */
+function HireLink({ chip = false }: { chip?: boolean }) {
+  const { t } = useT();
+  const { current } = useCurrentOffice();
+  const href = `/agents?hire=1${current !== ALL_OFFICES ? `&office=${encodeURIComponent(current)}` : ""}`;
+  return (
+    <Link href={href} prefetch={false} data-testid="team-hire"
+      className={chip ? "inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border border-accent bg-accent-soft px-3 text-[13px] font-semibold text-accent transition hover:bg-accent hover:text-white" : "inline-flex min-h-10 items-center gap-1 rounded-md px-2 text-[12.5px] font-semibold text-accent transition hover:bg-accent-soft md:min-h-8"}>
+      <Icon name="plus" size={13} />{t("work.team.hire")}
+    </Link>
+  );
+}
+
 const GROUP_KEY: Record<RailGroup, string> = { waiting: "work.team.waiting", working: "work.team.working", free: "work.team.free" };
 
 /** The team as rows (no cards): who waits for you, who works, who is free. Picking one changes the conversation. */
 export function TeamRail({ target, onPick, onPanel, className = "" }: { target: string | null; onPick: (id: string | null) => void; onPanel: (id: string) => void; className?: string }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds();
   const agents = useStore((s) => s.agents);
   const approvals = useStore((s) => s.approvals);
   const questions = useStore((s) => s.questions);
@@ -57,7 +73,10 @@ export function TeamRail({ target, onPick, onPanel, className = "" }: { target: 
   const working = Object.values(agents).filter((a) => ["thinking", "working", "talking", "reviewing", "waiting"].includes(a.state)).length;
   return (
     <nav aria-label={t("work.team.title")} data-testid="team-rail" data-tour="dashboard.team" className={`flex min-h-0 flex-col ${className}`}>
-      <div className="px-3 pb-1 pt-3 text-[13px] font-semibold text-ink">{t("work.team.title")}</div>
+      <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">
+        <span className="text-[13px] font-semibold text-ink">{t("work.team.title")}</span>
+        <HireLink />
+      </div>
       <div className="min-h-0 flex-1 overflow-y-auto px-1.5 pb-3">
         <button type="button" data-testid="team-all" data-active={target === null ? "1" : "0"} aria-pressed={target === null} onClick={() => onPick(null)}
           className={`mb-1 flex min-h-[48px] w-full items-center gap-2.5 rounded-[10px] px-2.5 py-1.5 text-left transition-colors ${target === null ? "bg-accent-soft" : "hover:bg-panel2"}`}>
@@ -88,11 +107,12 @@ export function TeamRail({ target, onPick, onPanel, className = "" }: { target: 
 /** Tablet: the same team as a strip of chips above the conversation (picking one changes who the box writes to). */
 export function TeamStrip({ target, onPick, onPanel }: { target: string | null; onPick: (id: string | null) => void; onPanel: (id: string) => void }) {
   const { t } = useT();
-  const order = useStore((s) => s.agentOrder);
+  const { ids: order } = useOfficeAgentIds();
   const agents = useStore((s) => s.agents);
   const chip = (active: boolean) => `inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] font-medium transition-colors ${active ? "border-accent bg-accent-soft text-accent" : "border-line bg-panel text-ink hover:bg-panel2"}`;
   return (
     <nav aria-label={t("work.team.title")} data-testid="team-strip" className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-line px-3 py-2 md:px-4">
+      <HireLink chip />
       <button type="button" data-testid="team-all" aria-pressed={target === null} onClick={() => onPick(null)} className={chip(target === null)}>{t("work.all")}</button>
       {order.map((id) => {
         const a = agents[id];

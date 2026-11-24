@@ -1,4 +1,5 @@
 "use client";
+import { useCurrentOfficeStore } from "@/lib/currentOffice";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import * as THREE from "three";
@@ -199,4 +200,21 @@ export function StyleVeil() {
       <style>{"@keyframes office-veil{0%{opacity:0}30%{opacity:.8}100%{opacity:0}}"}</style>
     </div>
   );
+}
+
+/** Short fade while the office on screen changes (the layout and its people swap behind it). No motion with reduced motion. */
+export function OfficeFade() {
+  const current = useCurrentOfficeStore((s) => s.stored);
+  const [on, setOn] = useState(false);
+  const last = useRef(current);
+  useEffect(() => {
+    if (last.current === current) return;
+    last.current = current;
+    const reduce = usePreferences.getState().prefs.reduceMotion || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) return;
+    setOn(true);
+    const t = setTimeout(() => setOn(false), 80);
+    return () => clearTimeout(t);
+  }, [current]);
+  return <div aria-hidden data-testid="office-fade" className={`pointer-events-none absolute inset-0 z-[6] bg-bg ${on ? "opacity-100" : "opacity-0 transition-opacity duration-300 ease-out"}`} />;
 }

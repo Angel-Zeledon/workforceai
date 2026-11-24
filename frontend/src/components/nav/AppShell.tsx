@@ -1,7 +1,7 @@
 "use client";
 import { AgentMark } from "../brand/AgentMark";
 import { ProviderAlert } from "./ProviderAlert";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { MOCK } from "@/lib/config";
@@ -42,6 +42,8 @@ import { RouteCurtain } from "./RouteCurtain";
 import { useAwayHeartbeat } from "../away/AwayHost";
 import { TrialBanner } from "./TrialBanner";
 import { ActivationChecklist } from "./ActivationChecklist";
+import { OfficeSelect } from "./OfficeSelect";
+import { useCurrentOffice, useCurrentOfficeBoot } from "@/lib/currentOffice";
 
 const COLLAPSE_KEY = "wf.sidebar.collapsed";
 const MORE_KEY = "wf.sidebar.more";
@@ -178,6 +180,18 @@ export function AppShell({ children }: { children: ReactNode }) {
   // the list is a view of the Office ("Lista | Oficina 3D"), so the title stays "Oficina"
   const title = t(SECTIONS.find((s) => s.id === section)?.label ?? "nav.office");
   const pendingCount = usePendingCount();
+  // the office the screens show: in the header next to Lista | Oficina 3D (own row on the phone)
+  useCurrentOfficeBoot();
+  const { hasSelector: hasOffices, current: currentOffice, offices: officeList, choose: chooseOffice } = useCurrentOffice();
+  // "Archivos de la oficina" (/d/<id>) and the header say the same office: a link into one picks it, picking another goes to it
+  const deptId = section === "department" ? decodeURIComponent(pathname.split("/")[2] ?? "") : "";
+  useEffect(() => { if (deptId && deptId !== currentOffice && officeList?.some((o) => o.id === deptId && o.can_enter)) chooseOffice(deptId); }, [deptId, officeList]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastOffice = useRef(currentOffice);
+  useEffect(() => {
+    const changed = lastOffice.current !== currentOffice; lastOffice.current = currentOffice;
+    if (changed && section === "department" && currentOffice !== "all" && currentOffice !== deptId) router.push(`/d/${encodeURIComponent(currentOffice)}`);
+  }, [currentOffice]); // eslint-disable-line react-hooks/exhaustive-deps
+  const officeSelect = hasOffices && ["office", "dashboard", "pending", "agents", "projects", "department"].includes(section);
 
   return (
     <div data-reduce={reduce ? "1" : "0"} className="flex h-dvh w-full overflow-hidden bg-bg text-ink">
@@ -238,6 +252,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </header>
 
+        {officeSelect && <div className="flex shrink-0 items-center gap-2 border-b border-line bg-panel px-3 py-1.5 sm:hidden"><OfficeSelect block /></div>}
         <TrialBanner />
         <ControlsBanner />
         <ProviderAlert />

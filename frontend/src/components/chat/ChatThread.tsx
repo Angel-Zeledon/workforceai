@@ -1,4 +1,6 @@
 "use client";
+import { officeForSend, useCurrentOffice } from "@/lib/currentOffice";
+import { filterByOffice } from "@/lib/currentOfficeLogic";
 import { useHelpers } from "@/lib/helpers";
 import { useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { api } from "@/lib/api";
@@ -216,7 +218,10 @@ export function Bubble({ m, grouped, showRoute }: { m: ChatMessage; grouped: boo
 /** Message list with typing indicator. aria-live so screen readers announce new messages politely. */
 export function ChatThread({ conv, showRoute = false, className = "", emptyText }: { conv: string; showRoute?: boolean; className?: string; emptyText: string }) {
   const { t } = useT();
-  const msgs = useStore((s) => s.chat[conv]) ?? EMPTY;
+  const all = useStore((s) => s.chat[conv]) ?? EMPTY;
+  // the conversation of the office is per office: what carries no office_id is General's
+  const { current: office } = useCurrentOffice();
+  const msgs = useMemo(() => (conv === "office" ? filterByOffice(all, office, (m) => m.office_id) : all), [all, conv, office]);
   const loadChat = useStore((s) => s.loadChat);
   const box = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -254,13 +259,14 @@ export function ChatThread({ conv, showRoute = false, className = "", emptyText 
  * `attachments` are drive paths already uploaded: they show as file cards in the user's message and reach the agents as paths to fs.read. */
 export async function sendChat(conv: string, text: string, from = "user", attachments: string[] = [], refs?: FileRef[]) {
   const store = useStore.getState();
+  const officeId = officeForSend(); // the office in the header, or the one picked in "Para:" while it shows all of them
   const files = refs ?? attachments.map((p) => ({ path: p, name: p.split("/").pop() || p, action: "attach" }));
-  store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString(), ...(files.length ? { files } : {}) });
+  store.addLocalChat({ id: `local:${Date.now().toString(36)}`, conversation: conv, turn_id: null, from, to: conv === "office" ? "all" : conv.slice(6), kind: "chat", text, reply_to: null, ts: new Date().toISOString(), ...(officeId ? { office_id: officeId } : {}), ...(files.length ? { files } : {}) });
   const customer = useChatCustomer.getState().customer; // B12: the chat works for this customer (its view is open)
   const goalId = useChatGoal.getState().goalId || undefined; // F1: optional company goal chosen for this message
   try {
     const hs = useHelpers.getState();
-    await api.postMessage(conv, text, attachments, customer?.id, undefined, goalId, conv === "office" && hs.enabled && hs.free);
+    await api.postMessage(conv, text, attachments, customer?.id, undefined, goalId, conv === "office" && hs.enabled && hs.free, officeId);
   } catch (e) {
     if (!customer && conv === "office" && /-> (404|405|501)\b/.test(String((e as Error)?.message))) { await api.postRequest(text); return; }
     throw e;
