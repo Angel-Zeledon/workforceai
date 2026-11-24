@@ -313,7 +313,7 @@ func TestRequesterReceivesTheirRequestLive(t *testing.T) {
 	}
 	for _, u := range []string{"u-boss", "u-ana"} {
 		for _, typ := range got[u] {
-			if typ != domain.EvMetricsUpdated && typ != domain.EvAgentCreated {
+			if typ != domain.EvMetricsUpdated && typ != domain.EvAgentCreated && typ != domain.EvAgentState { // the state arrives as "busy" (event_busy_test)
 				t.Errorf("%s (not a member) received %s: %v", u, typ, got[u])
 			}
 		}

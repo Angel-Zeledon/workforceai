@@ -97,14 +97,13 @@ func (s *server) visibleAgents(r *http.Request, agents []domain.Agent) (any, err
 		return list(agents), err
 	}
 	out := make([]agentView, 0, len(agents))
+	ws := s.work(r)
 	for _, a := range agents {
 		av := s.accessOf(m, v, a.ID)
 		if !av.Rights.See {
 			continue
 		}
-		if !m.CanSeeWork(v, a.ID) {
-			a = hideActivity(a)
-		}
+		a = ws.liveAgent(a)
 		out = append(out, agentView{Agent: a, Access: &av})
 	}
 	return out, nil
@@ -115,6 +114,28 @@ func (s *server) visibleAgents(r *http.Request, agents []domain.Agent) (any, err
 func hideActivity(a domain.Agent) domain.Agent {
 	a.Activity, a.CurrentTaskID, a.Progress = "", nil, 0
 	a.Metrics = domain.AgentMetrics{} // its tasks and their cost are that work too (D3)
+	return a
+}
+
+// busyAgent is the live state of an agent seen by someone who does not see the office it works for right now (a General
+// agent doing a private office's request): the state stays ("working"), what it is doing and for whom does not.
+func busyAgent(a domain.Agent) domain.Agent {
+	a.Activity, a.CurrentTaskID, a.Progress = "", nil, 0
+	return a
+}
+
+// liveAgent is the agent as the person may read its live state: blanked when its work is hidden from them (hideActivity)
+// and also when the task it is on (or was last on) was asked from an office they do not see (busyAgent).
+func (w *workScope) liveAgent(a domain.Agent) domain.Agent {
+	if w.open() {
+		return a
+	}
+	if !w.agent(a.ID) {
+		return hideActivity(a)
+	}
+	if a.CurrentTaskID != nil && !w.taskID(*a.CurrentTaskID) {
+		return busyAgent(a)
+	}
 	return a
 }
 

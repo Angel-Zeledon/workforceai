@@ -60,6 +60,9 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 			r.Log.Warn("save event", "type", a.Type, "err", err)
 		}
 	}
+	if scoped && a.Type == domain.EvAgentState {
+		r.publishBusy(ctx, ev) // before the real one: whoever is in the office ends up with the real state
+	}
 	if err := r.Pub.Publish(ctx, ev); err != nil {
 		r.Log.Warn("publish event", "type", a.Type, "err", err)
 	}
@@ -78,6 +81,24 @@ func (r *Recorder) Emit(ctx context.Context, a Action) {
 		// D3: filed under the private agent that sealed the event, so GET /activity keeps it within the office even
 		// when the event names no agent or one of General (the assistant's report of a private request)
 		r.activity(ctx, office.Agent, a.Type, a.Text, office.Users)
+	}
+}
+
+// publishBusy tells the whole organization that an agent is busy when the state it just changed to is the work of a
+// private office (D3): the state stays, what the agent is doing and the task (its title, its id) do not, so whoever is
+// not in the office sees "busy" and never for whom. The real event reaches the office's members only.
+func (r *Recorder) publishBusy(ctx context.Context, real domain.Event) {
+	p, _ := real.Payload.(map[string]any)
+	busy := map[string]any{"agent_id": real.AgentID, "state": p["state"], "activity": "", "task_id": nil, "progress": 0}
+	if id, ok := p["agent_id"]; ok {
+		busy["agent_id"] = id
+	}
+	ev := domain.Event{ID: newID(), Type: real.Type, TS: real.TS, OrgID: real.OrgID, AgentID: real.AgentID, Payload: busy}
+	if err := r.Store.SaveEvent(ctx, ev.OrgID, ev); err != nil {
+		r.Log.Warn("save event", "type", ev.Type, "err", err)
+	}
+	if err := r.Pub.Publish(ctx, ev); err != nil {
+		r.Log.Warn("publish event", "type", ev.Type, "err", err)
 	}
 }
 

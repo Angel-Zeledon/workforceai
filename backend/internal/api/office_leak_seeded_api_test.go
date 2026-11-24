@@ -41,7 +41,11 @@ func TestOfficeLeakSeededWorkAPI(t *testing.T) {
 		}
 	}
 
-	paths := []string{"/requests", "/requests/req-SECRETO", "/requests/req-SECRETO/audit", "/tasks", "/tasks/task-SECRETO", "/tasks?status=running",
+	// the assistant is working on the private office's task: its live state says what, to who sees the office only
+	secretTask := "task-SECRETO"
+	must(st.UpdateAgentState(ctx, org, "assistant", domain.StateWorking, "SECRETO-redactando el informe", &secretTask, 50))
+
+	paths := []string{"/agents", "/agents/assistant", "/agents/assistant/detail", "/requests", "/requests/req-SECRETO", "/requests/req-SECRETO/audit", "/tasks", "/tasks/task-SECRETO", "/tasks?status=running",
 		"/reports", "/reports/rep-SECRETO", "/approvals", "/approvals?status=pending", "/approvals/inbox", "/needs-you", "/away-summary?min_hours=0",
 		"/conversations", "/conversations/conv-SECRETO/messages", "/chats/threads", "/artifacts", "/questions", "/projects", "/debates"}
 	commands := []map[string]any{
@@ -71,9 +75,16 @@ func TestOfficeLeakSeededWorkAPI(t *testing.T) {
 
 	// the member of the office reads it (so the checks above are not empty), and everybody reads General's work
 	for path, want := range map[string]string{"/requests": "SECRETO-pedido", "/tasks": "SECRETO-tarea", "/reports": "SECRETO-informe",
-		"/approvals": "SECRETO-aprobacion", "/requests/req-SECRETO": "SECRETO-pedido", "/tasks/task-SECRETO": "SECRETO-tarea"} {
+		"/approvals": "SECRETO-aprobacion", "/agents/assistant": "SECRETO-redactando", "/requests/req-SECRETO": "SECRETO-pedido", "/tasks/task-SECRETO": "SECRETO-tarea"} {
 		if resp, raw := e.do("GET", api1+path, marta, nil, nil); resp.StatusCode != 200 || !strings.Contains(string(raw), want) {
 			t.Fatalf("the member: GET %s = %d, lacks %s: %.300s", path, resp.StatusCode, want, raw)
+		}
+	}
+	// to the rest the agent is busy: its state stays, what it does and the task do not
+	for _, tok := range []string{owner, ana, luis} {
+		_, raw := e.do("GET", api1+"/agents/assistant", tok, nil, nil)
+		if !strings.Contains(string(raw), `"state":"working"`) || strings.Contains(string(raw), "task-SECRETO") {
+			t.Fatalf("the assistant is not just busy for the rest: %s", raw)
 		}
 	}
 	for path, want := range map[string]string{"/requests": "ABIERTO-pedido", "/tasks": "ABIERTO-tarea", "/reports": "ABIERTO-informe", "/approvals": "ABIERTO-aprobacion"} {

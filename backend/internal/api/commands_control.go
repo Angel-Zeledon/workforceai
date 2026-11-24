@@ -657,6 +657,7 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 			continue
 		}
 		nRun += running[a.ID]
+		a = c.work.liveAgent(a) // D3: busy, not for whom
 		rows = append(rows, []string{a.Name, string(a.State), trunc(a.Activity, 80), fmt.Sprint(running[a.ID])})
 	}
 	text := fmt.Sprintf(c.t("%d tareas en curso, %d aprobaciones pendientes.", "%d tasks running, %d approvals pending."), nRun, len(appr))

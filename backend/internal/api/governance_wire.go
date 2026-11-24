@@ -131,9 +131,7 @@ func (b publicBackend) Agents(ctx context.Context) (any, error) {
 	}
 	ws := b.scope(ctx)
 	for i := range v {
-		if !ws.agent(v[i].ID) {
-			v[i] = hideActivity(v[i])
-		}
+		v[i] = ws.liveAgent(v[i])
 	}
 	return list(v), ws.err
 }

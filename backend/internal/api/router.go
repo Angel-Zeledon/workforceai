@@ -532,10 +532,7 @@ func (s *server) getAgent(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	if !ws.agent(a.ID) { // D3: the agent is listed, not what it is working on
-		a = hideActivity(a)
-	}
-	writeJSON(w, 200, a)
+	writeJSON(w, 200, ws.liveAgent(a)) // D3: the agent is listed, not what it is working on (nor for which office)
 }
 
 func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
@@ -552,11 +549,17 @@ func (s *server) agentDetail(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
+	d.Agent = ws.liveAgent(d.Agent)
 	if !ws.agent(d.Agent.ID) { // D3: the agent is listed (an admin manages it), its work is not
-		d.Agent = hideActivity(d.Agent)
 		d.Tasks, d.Conversations, d.Memory, d.RecentActivity = nil, nil, nil, nil
 	} else if !ws.open() {
 		ws.index(d.Tasks)
+		// a General agent's page holds no task asked from an office the person cannot see, nor what it remembers for it
+		d.Tasks = slices.DeleteFunc(d.Tasks, func(t domain.Task) bool { return !ws.task(t) })
+		d.Memory = slices.DeleteFunc(d.Memory, func(m domain.Memory) bool {
+			office, ok := strings.CutPrefix(m.Scope, "agent@")
+			return ok && !ws.office(office)
+		})
 		d.Conversations = slices.DeleteFunc(d.Conversations, func(c domain.Conversation) bool { return !ws.conversation(c) })
 	}
 	d.Tasks, d.Conversations, d.Memory, d.RecentActivity = list(d.Tasks), list(d.Conversations), list(d.Memory), list(d.RecentActivity)
