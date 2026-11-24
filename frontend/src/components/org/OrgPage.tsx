@@ -13,6 +13,7 @@ import { AgentRoleEditor } from "./AgentRoleEditor";
 import { DelegationPanel } from "./DelegationPanel";
 import { DepartmentEditor } from "./DepartmentEditor";
 import { OfficesPanel } from "./OfficesPanel";
+import { OfficeCards } from "../offices/OfficeCards";
 import { OrgChartTree } from "./OrgChartTree";
 import { PersonEditor } from "./PersonEditor";
 import { allDepts, allMembers, btnGhost, btnPrimary, type MemberAt } from "./shared";
@@ -58,6 +59,7 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
   const [hire, setHire] = useState(search.get("hire") === "1");
   const hireOffice = search.get("office") || undefined;
   const [industries, setIndustries] = useState(false);
+  const [cardsKey, setCardsKey] = useState(0);
   const viewAll = useViewAll();
   const [more, setMore] = useState(false);
   const { isAdmin } = useViewer();
@@ -130,8 +132,11 @@ function OrgScreen({ scope }: { scope: "agents" | "offices" }) {
           </div>
         )}
         {chart && !gallery && scope === "offices" && tab === "offices" && (
-          <OfficesPanel people={people} onChanged={load} depts={depts} onEditDept={setDept} onNewDept={() => setDept(null)} focusDepartments={focusDepts}
-            actions={<button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>} />
+          <div className="grid gap-6">
+            <section aria-label={t("nav.offices")}><OfficeCards refresh={cardsKey} /></section>
+            <OfficesPanel only="rest" people={people} onChanged={() => { load(); setCardsKey((k) => k + 1); }} depts={depts} onEditDept={setDept} onNewDept={() => setDept(null)} focusDepartments={focusDepts}
+              actions={<button type="button" data-testid="org-industries-link" onClick={() => setIndustries(true)} className={btnGhost}>{t("org.offices.industries")}</button>} />
+          </div>
         )}
         {chart && !gallery && scope === "offices" && tab === "chart" && <OrgChartTree chart={chart} onDept={setDept} onAgent={setAgent} onPerson={setPerson} onNewDept={() => setDept(null)} />}
         {chart && !gallery && scope === "offices" && tab === "delegation" && <DelegationPanel chart={chart} />}
