@@ -68,6 +68,10 @@ func (s *orgSpy) CreateAgent(ctx context.Context, orgID string, a domain.Agent) 
 	return s.Store.(application.AgentWriter).CreateAgent(ctx, orgID, a)
 }
 
+func (s *orgSpy) DeleteAgent(ctx context.Context, orgID, id string) error {
+	return s.Store.(application.AgentDeleter).DeleteAgent(ctx, orgID, id)
+}
+
 func (s *orgSpy) note(org string) {
 	s.mu.Lock()
 	s.orgs[org]++

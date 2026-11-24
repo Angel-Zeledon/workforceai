@@ -71,6 +71,12 @@ type AgentWriter interface {
 	CreateAgent(ctx context.Context, orgID string, a domain.Agent) error
 }
 
+// AgentDeleter removes an agent that was just created and never finished being set up (HireWithSetup rolls back
+// with it). It is not a way to fire an agent.
+type AgentDeleter interface {
+	DeleteAgent(ctx context.Context, orgID, id string) error
+}
+
 // AuditStore is the read side of the tamper-evident audit trail (the write
 // side is Store.AddAudit, which chains each entry to the previous one of the
 // organization). Both the memory and the Postgres stores implement it.
