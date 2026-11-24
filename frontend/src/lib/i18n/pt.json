@@ -7446,5 +7446,8 @@
   "office.select.label": "Escritório",
   "office.select.closed": "privado, fechado",
   "office.select.sendTo": "Escritório:",
-  "office.select.sendHint": "Esta mensagem vai para o escritório {name}"
+  "office.select.sendHint": "Esta mensagem vai para o escritório {name}",
+  "office.busyIn": "ocupado em {name}",
+  "office.busyElsewhere": "ocupado em outro escritório",
+  "work.team.hire": "Contratar"
 }

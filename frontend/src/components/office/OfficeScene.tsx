@@ -22,7 +22,7 @@ import { useOfficeLayout, useOfficeStyle } from "@/lib/officeLayout";
 import { useRewards } from "@/lib/rewards";
 import { PeopleLayer } from "../presence/PeopleLayer";
 import { HelperLayer } from "./HelperLayer";
-import { StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
+import { OfficeFade, StyleAmbient, StyleVeil, ThemeApplier } from "./ThemeLayer";
 import { FrameDriver } from "./FrameDriver";
 import { placed } from "./editorActions";
 import { PixelLayer } from "./PixelLayer";
@@ -161,6 +161,7 @@ export default function OfficeScene() {
         {pixel && <PixelLayer />} {/* Pixel: draws small and enlarges by whole pixels (takes over the render) */}
       </Canvas>
       <StyleVeil /> {/* short dissolve while the office switches style */}
+      <OfficeFade /> {/* and while the office on screen changes */}
       <LabelLayer />
       <CoinAnnouncer />
     </div>

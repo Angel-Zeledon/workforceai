@@ -7,7 +7,7 @@ import { useOfficeLayout } from "./officeLayout";
 import { useSession } from "./session";
 import { useAgentOffices } from "./useAgentOffices";
 import { useStore } from "./store";
-import { ALL_OFFICES, currentOfficeKey, filterAgentIds, officeChoices, officeOf, resolveCurrent, sendOfficeId, type AlsoIn } from "./currentOfficeLogic";
+import { ALL_OFFICES, currentOfficeKey, filterAgentIds, officeChoices, officeOf, resolveCurrent, sendOfficeId, busyElsewhere, type AlsoIn } from "./currentOfficeLogic";
 
 /** The office the person is in, per person and device. Pure rules: currentOfficeLogic.ts. */
 interface State {
@@ -105,4 +105,18 @@ export function officeForSend(): string | undefined {
   const st = useCurrentOfficeStore.getState();
   if (!officeChoices(st.offices)) return undefined;
   return sendOfficeId(resolveCurrent(st.stored, st.offices), usePickedOffice.getState().id);
+}
+
+/** "Busy for another office": the agent's active work belongs to an office other than the one on screen. Named when the
+ *  person can see that office, generic when it is closed to them. Nothing is computed with "Todas mis oficinas". */
+export function useBusyElsewhere(agentId: string): { kind: "none" } | { kind: "named"; name: string } | { kind: "hidden" } {
+  const { current, offices } = useCurrentOffice();
+  const busy = useStore((s) => {
+    if (current === ALL_OFFICES) return "";
+    const mine = Object.values(s.tasks).filter((t) => t.agent_id === agentId && ["running", "awaiting_approval", "needs_input"].includes(t.status));
+    if (!mine.length) return "";
+    const offs = mine.map((t) => officeOf(t.office_id ?? s.requests[t.request_id]?.office_id));
+    return offs.some((o) => o === officeOf(current)) ? "" : offs[0];
+  });
+  return useMemo(() => busyElsewhere(busy, current, offices), [busy, current, offices]);
 }
