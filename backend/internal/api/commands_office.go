@@ -181,7 +181,7 @@ func cmdDaily(c *cmdCall) (*cmdResult, *cmdFail) {
 	tasks, _ := c.s.Store.ListTasks(c.ctx, c.org, "", "")
 	done := 0
 	for _, t := range tasks {
-		if !c.work.agent(t.AgentID) { // D3
+		if !c.work.task(t) { // D3
 			continue
 		}
 		if t.Status == domain.TaskDone && t.FinishedAt != nil && !t.FinishedAt.Before(day) {
@@ -202,7 +202,7 @@ func cmdDaily(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	appr, _ := c.s.Store.ListApprovals(c.ctx, c.org, string(domain.ApprovalPending))
-	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) }) // D3
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.seesApproval(a) }) // D3
 	for _, a := range appr {
 		facts = append(facts, application.ChatHistoryItem{From: a.AgentID, Text: "Aprobación pendiente: " + a.Title})
 	}
@@ -233,14 +233,14 @@ func cmdPending(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
-	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) }) // D3
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.seesApproval(a) }) // D3
 	for _, a := range appr {
 		rows = append(rows, []string{c.t("Aprobación", "Approval"), trunc(a.Title, 90), a.AgentID, "/approvals/" + a.ID})
 	}
 	tasks, _ := c.s.Store.ListTasks(c.ctx, c.org, "", "")
 	open := 0
 	for _, t := range tasks {
-		if (t.Status == domain.TaskRunning || t.Status == domain.TaskPending || t.Status == domain.TaskBlocked) && c.work.agent(t.AgentID) {
+		if (t.Status == domain.TaskRunning || t.Status == domain.TaskPending || t.Status == domain.TaskBlocked) && c.work.task(t) {
 			open++
 			rows = append(rows, []string{c.t("Tarea", "Task"), trunc(t.Title, 90), t.AgentID, string(t.Status)})
 		}
@@ -561,7 +561,7 @@ func cmdLearn(c *cmdCall) (*cmdResult, *cmdFail) {
 	if err != nil {
 		return nil, c.serviceFail(err)
 	}
-	tasks = slices.DeleteFunc(tasks, func(t domain.Task) bool { return !c.work.agent(t.AgentID) }) // D3: only work the person sees
+	tasks = slices.DeleteFunc(tasks, func(t domain.Task) bool { return !c.work.task(t) }) // D3: only work the person sees
 	var last *domain.Task
 	for i := range tasks {
 		if tasks[i].Output != nil && (last == nil || tasks[i].CreatedAt.After(last.CreatedAt)) {

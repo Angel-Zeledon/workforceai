@@ -12,16 +12,23 @@ import (
 	"aiworkforce/backend/internal/application"
 	"aiworkforce/backend/internal/auth"
 	"aiworkforce/backend/internal/domain"
+	longmem "aiworkforce/backend/internal/memory"
 	"aiworkforce/backend/internal/officeaudience"
 )
 
 // officesWorldSealed is officesWorld with the live-event rule of D3 installed on the recorder, as the server wires it.
-func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte string) {
+func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte, org string) {
 	t.Helper()
 	var d *api.Deps
-	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) { withOfficesMulti(x); d = x }})
+	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) {
+		withOfficesMulti(x)
+		docs := longmem.NewMemStore()
+		x.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
+		x.Commands = &api.CommandsDeps{}
+		d = x
+	}})
 	o := e.register("owner-ao@example.com", "OwnerAO")
-	owner = o.AccessToken
+	owner, org = o.AccessToken, o.OrgID
 	ana = e.member(o, "ana-ao@example.com", auth.RoleMember)
 	marta = e.member(o, "marta-ao@example.com", auth.RoleMember)
 	luis = e.member(o, "luis-ao@example.com", auth.RoleMember)
@@ -43,7 +50,7 @@ func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, 
 // its text, its tasks, report, approvals, activity, away summary, needs-you and files never reach who is not in the
 // office (an admin who is not a member included), and a member of the office reads all of it.
 func TestOfficeLeakWorkSurfacesAPI(t *testing.T) {
-	e, owner, ana, marta, luis, _, soporte := officesWorldSealed(t)
+	e, owner, ana, marta, luis, _, soporte, _ := officesWorldSealed(t)
 	e.json("PUT", api1+"/offices/"+soporte, owner, map[string]any{"visibility": "private"}, 200)
 	// the member asks for work from the private office; a General agent (the assistant) takes it
 	r := e.json("POST", api1+"/requests", marta, map[string]any{"text": "SECRETO-pedido redacta el informe de soporte", "office_id": soporte}, 202)

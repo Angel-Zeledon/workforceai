@@ -50,7 +50,7 @@ func (ws *workScope) viewer(userID string) bool {
 
 // seesQuestion: the work of the agent that asks, or the question is for the person (they launched the work).
 func (ws *workScope) seesQuestion(q application.Question) bool {
-	return ws.agent(q.AgentID) || ws.viewer(q.AskedFor)
+	return ws.agent(q.AgentID) && ws.taskID(q.TaskID) || ws.viewer(q.AskedFor)
 }
 
 // seesRehearsal: the work of the agent, or the request it belongs to (its requester sees its rehearsal report).
@@ -94,7 +94,7 @@ type artifactRule struct {
 	s        *server
 	r        *http.Request
 	ws       *workScope
-	tasks    map[string]string // task -> agent (loaded once)
+	tasks    map[string]domain.Task // task id -> task (loaded once): its agent and the office it was asked from
 	projects map[string]bool   // project -> every agent node hidden
 	err      error
 }
@@ -120,12 +120,12 @@ func (a *artifactRule) sees(m artifacts.Meta) bool {
 				a.err = err
 				return false
 			}
-			a.tasks = make(map[string]string, len(ts))
+			a.tasks = make(map[string]domain.Task, len(ts))
 			for _, t := range ts {
-				a.tasks[t.ID] = t.AgentID
+				a.tasks[t.ID] = t
 			}
 		}
-		if agent, ok := a.tasks[*m.TaskID]; ok && !a.ws.agent(agent) {
+		if t, ok := a.tasks[*m.TaskID]; ok && !a.ws.task(t) {
 			return false
 		}
 	}

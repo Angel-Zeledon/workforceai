@@ -638,7 +638,7 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 	}
 	running, waiting := map[string]int{}, 0
 	for _, t := range tasks {
-		if !c.work.agent(t.AgentID) { // D3
+		if !c.work.task(t) { // D3 (its agent's work and the office its request was asked from)
 			continue
 		}
 		switch t.Status {
@@ -649,7 +649,7 @@ func cmdStatus(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 	}
 	appr, _ := c.s.Store.ListApprovals(c.ctx, c.org, string(domain.ApprovalPending))
-	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.agent(a.AgentID) })
+	appr = slices.DeleteFunc(appr, func(a domain.Approval) bool { return !c.work.seesApproval(a) })
 	rows := [][]string{}
 	nRun := 0
 	for _, a := range agents {
@@ -683,7 +683,7 @@ func cmdTrace(c *cmdCall) (*cmdResult, *cmdFail) {
 		}
 		var latest time.Time
 		for _, t := range tasks {
-			if t.CreatedAt.After(latest) && c.work.agent(t.AgentID) {
+			if t.CreatedAt.After(latest) && c.work.task(t) {
 				latest, agentID = t.CreatedAt, t.AgentID
 			}
 		}
