@@ -34,6 +34,8 @@ type workScope struct {
 	err    error
 	agents map[string][]string // request -> the agents of its tasks (filled by index or on demand)
 	seen   map[string]bool     // request -> visible
+	tasks  map[string]*domain.Task // task id -> task (nil: missing), filled on demand or all at once (preloadTasks)
+	all    bool                    // tasks holds every task of the organization
 	r      *http.Request
 }
 
@@ -219,11 +221,44 @@ func (w *workScope) taskID(id string) bool {
 	if w.m == nil {
 		return true
 	}
+	if t, ok := w.tasks[id]; ok || w.all {
+		return t == nil || w.task(*t) // a missing task is left to the caller
+	}
 	t, err := w.s.Store.GetTask(w.ctx, w.org, id)
 	if errors.Is(err, domain.ErrNotFound) {
 		return true
 	}
-	return err == nil && w.task(t)
+	if err != nil {
+		return false
+	}
+	if w.tasks == nil {
+		w.tasks = map[string]*domain.Task{}
+	}
+	w.tasks[id] = &t
+	return w.task(t)
+}
+
+// preloadTasks reads every task of the organization once, so a listing that asks taskID for each of its rows costs no
+// more reads (nothing to load when nothing is hidden). A failure leaves the per-task reads in place.
+func (w *workScope) preloadTasks() {
+	if w.all || w.load() != nil || w.m == nil {
+		return
+	}
+	ts, err := w.s.Store.ListTasks(w.ctx, w.org, "", "")
+	if err != nil {
+		return
+	}
+	w.tasks = make(map[string]*domain.Task, len(ts))
+	for i := range ts {
+		w.tasks[ts[i].ID] = &ts[i]
+	}
+	w.all = true
+}
+
+// ownWork reports whether the person sees what hangs from a task and/or a request (an e-mail, a code run, a trace):
+// both must be visible when both are named, and what names neither stays as it was (true).
+func (w *workScope) ownWork(taskID, requestID string) bool {
+	return w.taskID(taskID) && (requestID == "" || w.request(requestID))
 }
 
 // office reports whether the person sees what was asked and answered in an office (fails closed).

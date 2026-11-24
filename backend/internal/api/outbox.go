@@ -46,7 +46,11 @@ func (s *server) listOutbox(w http.ResponseWriter, r *http.Request) {
 		s.fail(w, err)
 		return
 	}
-	items = slices.DeleteFunc(items, func(it gateway.OutboxItem) bool { return it.AgentID != "" && !ws.agent(it.AgentID) })
+	ws.preloadTasks()
+	// the work of the agent, and the office of the task/request the e-mail came from (the assistant writes for any office)
+	items = slices.DeleteFunc(items, func(it gateway.OutboxItem) bool {
+		return it.AgentID != "" && !ws.agent(it.AgentID) || !ws.ownWork(it.TaskID, it.RequestID)
+	})
 	writeJSON(w, 200, map[string]any{"items": items})
 }
 

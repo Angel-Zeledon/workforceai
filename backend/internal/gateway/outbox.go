@@ -54,6 +54,8 @@ type OutboxItem struct {
 	ID             string     `json:"id"`
 	ApprovalID     string     `json:"approval_id,omitempty"`
 	AgentID        string     `json:"agent_id"`
+	TaskID         string     `json:"-"` // the work it came from: the API leaves out what the person may not see
+	RequestID      string     `json:"-"`
 	ConnectionID   string     `json:"connection_id"`
 	AccountLabel   string     `json:"account_label"`
 	Tool           string     `json:"tool"`
@@ -250,7 +252,7 @@ func (g *Gateway) ApprovalResolved(approvalID string, approved bool) {
 
 func (g *Gateway) entryItem(e *outboxEntry) OutboxItem {
 	a := e.call.Args
-	return OutboxItem{ID: e.id, ApprovalID: e.approvalID, AgentID: e.call.AgentID, ConnectionID: e.connID, AccountLabel: e.account,
+	return OutboxItem{ID: e.id, ApprovalID: e.approvalID, AgentID: e.call.AgentID, TaskID: e.call.TaskID, RequestID: e.call.RequestID, ConnectionID: e.connID, AccountLabel: e.account,
 		Tool: e.call.Tool, Action: e.call.Action, To: strList(a["to"]), Cc: strList(a["cc"]), Subject: str(a["subject"]), Body: str(a["body"]),
 		Status: e.status, BlockReason: e.reason, OriginExternal: e.pending.ExternalOrigin, NewRecipient: contains(e.pending.Flags, "recipient_outside_allowlist"),
 		Tainted: e.pending.Tainted, Reversibility: e.pending.Reversibility, HoldSeconds: e.pending.HoldSeconds, Flags: nonNil(e.pending.Flags),
@@ -266,7 +268,7 @@ func nonNil(l []string) []string {
 
 // holdItem builds the item of a hold (sent/cancelled holds have no payload any more).
 func (g *Gateway) holdItem(ctx context.Context, h connections.Hold) OutboxItem {
-	it := OutboxItem{ID: h.ID, ApprovalID: h.ApprovalID, AgentID: h.AgentID, ConnectionID: h.ConnectionID, Tool: h.Tool, Action: h.Action,
+	it := OutboxItem{ID: h.ID, ApprovalID: h.ApprovalID, AgentID: h.AgentID, TaskID: h.TaskID, ConnectionID: h.ConnectionID, Tool: h.Tool, Action: h.Action,
 		To: nonNil(h.Recipients), Cc: strList(h.Payload["cc"]), Subject: h.Summary, Body: str(h.Payload["body"]), BlockReason: h.Reason, Tainted: h.Tainted,
 		Reversibility: "none", HoldSeconds: int(g.HoldWindow() / time.Second), Flags: []string{}, Version: 1, CreatedAt: h.CreatedAt, UpdatedAt: h.CreatedAt}
 	switch h.Status {
