@@ -34,6 +34,7 @@ from .models import (
 
 if TYPE_CHECKING:  # avoid a circular import (estimate.py imports engine.py)
     from .estimate import EstimateRequest, EstimateResponse
+    from .models import SplitRequest, SplitResponse
 
 log = logging.getLogger("agent_runtime")
 
@@ -142,6 +143,12 @@ class AgentEngine(abc.ABC):
         from .hier_plan import sim_plan_phase
 
         return sim_plan_phase(req)
+
+    async def split(self, req: "SplitRequest") -> "SplitResponse":
+        """/v1/split: the rules first (no model), then the deterministic simulation. Live engines ask the model."""
+        from .split import sim_split
+
+        return sim_split(req)
 
     async def review(self, req: ReviewRequest) -> ReviewResponse:
         """Quality review of ONE task output (Q1). Default: the deterministic simulated reviewer."""

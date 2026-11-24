@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 
 from .engine import AgentEngine, _truthy, select_engine
 from .estimate import EstimateRequest, EstimateResponse
+from .models import SplitRequest, SplitResponse
+from .split import finalize_split
 from .providers import ProviderError, config_from_credential, configured_providers, default_provider, scrub
 from .replan import ReplanRequest, ReplanResponse
 from .devils_advocate import CounterargumentRequest, CounterargumentResponse
@@ -168,6 +170,11 @@ def create_app(engine: AgentEngine | None = None) -> FastAPI:
     @app.post("/v1/plan-phase", response_model=PlanPhaseResponse, response_model_exclude_none=True)
     async def plan_phase(req: PlanPhaseRequest):
         return await guarded(eng_for(req).plan_phase(req))
+
+    @app.post("/v1/split", response_model=SplitResponse, response_model_exclude_none=True)
+    async def split_parts(req: SplitRequest):
+        req = _with_marker_lang(req, req.text)
+        return finalize_split(await guarded(eng_for(req).split(req)), req)
 
     @app.post("/v1/replan", response_model=ReplanResponse, response_model_exclude_none=True)
     async def replan(req: ReplanRequest):
