@@ -285,6 +285,13 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 		return AmendResult{}, fmt.Errorf("%w: the change creates a dependency cycle through %s", domain.ErrInvalid, cyc)
 	}
 	now := time.Now().UTC()
+	reqOffice := "" // the tasks added to a request belong to its office
+	for _, t := range all {
+		if t.OfficeID != "" {
+			reqOffice = t.OfficeID
+			break
+		}
+	}
 	depth := func(id string) int { return byID[id].Depth }
 	fresh := make([]domain.Task, 0, len(a.Add))
 	freshByID := map[string]domain.Task{}
@@ -314,8 +321,13 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 			if agent == "" {
 				agent = assistantID
 			}
+			if reqOffice != "" && agent != assistantID && o.officeScope != nil {
+				if ok, err := o.officeScope.WorksFor(ctx, o.org(ctx), agent, reqOffice); err != nil || !ok {
+					return AmendResult{}, fmt.Errorf("%w: agent %s does not work for the office of this request", domain.ErrInvalid, agent)
+				}
+			}
 			t := domain.Task{ID: id, RequestID: requestID, Title: strings.TrimSpace(n.Title), Description: n.Description, AgentID: agent,
-				Status: domain.TaskPending, DependsOn: deps[id], CreatedAt: now, Depth: d,
+				Status: domain.TaskPending, DependsOn: deps[id], CreatedAt: now, Depth: d, OfficeID: reqOffice,
 				AssignedReason: "Added by an approved plan change", Helper: n.Helper}
 			if n.AssignedReason != "" {
 				t.AssignedReason = n.AssignedReason

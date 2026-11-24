@@ -182,6 +182,7 @@ func wireConnections(ctx context.Context, cfg config.Config, log *slog.Logger, p
 	ctl.Counters = counterStore(pg) // anomaly windows survive restarts (Postgres)
 	gw := gateway.New(cs, ctl, sus, log)
 	gw.Audit, gw.Emit, gw.HoldSeconds, gw.OrgIDs = audit, emit, cfg.EmailHoldSeconds, orgIDs
+	gw.RequestOffice = orch.OfficeOfRequest // a call without the office of its request in its context gets it from the request
 	if pg != nil {
 		// Durable at-most-once of approved actions (migration 350): the same
 		// approval never runs twice, across restarts, the outbox and the task.

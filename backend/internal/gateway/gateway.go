@@ -68,6 +68,10 @@ type Gateway struct {
 	// Rehearsal (optional, B9) answers whether the agent or the request is in
 	// rehearsal; GatewayCall.Rehearsal is honored without it (rehearsal.go).
 	Rehearsal application.RehearsalPolicy
+	// RequestOffice (optional) tells the office a request was asked from. A call that reaches the gateway without the
+	// office in its context (an approved action run later, a retry) gets it from its request, so the files, memory and
+	// skills of the tools never come from another office (application/office_scope.go). An error refuses the call.
+	RequestOffice func(ctx context.Context, org, requestID string) (string, error)
 
 	mu        sync.Mutex
 	seen      map[string]map[string]bool // org/task -> addresses seen in external content
@@ -377,6 +381,13 @@ func (g *Gateway) wasSeen(org, task, addr string) bool {
 
 // Execute implements application.ToolGateway.
 func (g *Gateway) Execute(ctx context.Context, c application.GatewayCall) application.GatewayOutcome {
+	if g.RequestOffice != nil && c.RequestID != "" && application.RequestOfficeFrom(ctx) == "" {
+		office, err := g.RequestOffice(ctx, c.Org, c.RequestID)
+		if err != nil {
+			return application.GatewayOutcome{Decision: "denied", DenyReason: "office_scope_unknown"}
+		}
+		ctx = application.WithRequestOffice(ctx, office)
+	}
 	if nt, side, ok := g.nativeFor(c.Tool, c.Action); ok {
 		return g.executeNative(ctx, c, nt, side)
 	}

@@ -120,6 +120,7 @@ func wireDepartments(w departmentWiring) *offices.Service {
 	if w.Conns != nil {
 		w.Conns.AgentOffice = agentOffices{svc: svc}.AgentOffice // D3: a department's connections serve its agents only
 	}
+	w.Orch.SetOfficeScope(agentOffices{svc: svc}) // the office a request is asked from scopes agents, memory and files
 	w.Orch.SetAgentOffice(agentOffices{svc: svc}.AgentOffice) // F6: a stalled task is reassigned inside its department
 	if w.AuthOn && w.Drive != nil {
 		w.Drive.SetPeople(officePeople{svc: svc}) // office folders: member edits, open reads, private none
@@ -181,7 +182,7 @@ func officeRecall(m *memory.Service, svc *offices.Service) {
 	})
 	m.SetExtraRecall(func(ctx context.Context, org, agentID, _, text string) []application.RecalledMemory {
 		var out []application.RecalledMemory
-		for _, n := range svc.RecallNotes(ctx, org, agentID, application.PersonFrom(ctx), text, 3) {
+		for _, n := range svc.RecallNotesFor(ctx, org, agentID, application.RequestOfficeFrom(ctx), application.PersonFrom(ctx), text, 3) {
 			out = append(out, application.RecalledMemory{Ref: "team:" + n.ID, Kind: memory.KindNote, Title: offices.NoteTitle(n), Snippet: n.Text, At: n.CreatedAt})
 		}
 		return out

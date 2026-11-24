@@ -54,6 +54,8 @@ type Orchestrator struct {
 	files    chatFiles        // files agents wrote per task and the resolver of paths (chat_files.go)
 	skillSrc SkillSource      // optional: the agent's active skills (skills_flow.go)
 	memSrc   MemorySource     // optional: long-term memory (memory_flow.go)
+	// officeScope (optional) says where an agent works for the office a request was asked from (office_scope.go).
+	officeScope OfficeScope
 	// customers (optional) scopes requests to one customer of the organization (customer.go, B12).
 	customers CustomerScope
 	// goals (optional) validates the company goal a request points to and hands it to the agents (goal.go, F1).
@@ -168,6 +170,8 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	if err != nil {
 		return "", err
 	}
+	office := RequestOfficeFrom(ctx)
+	agents = o.officeAgents(ctx, office, agents) // only the agents that work for the office the request is asked from
 	if preset != nil && o.hooks.deleg != nil { // delegation rules: a preset plan (/assign, projects, meetings) is refused up front
 		known := make(map[string]domain.Agent, len(agents))
 		for _, a := range agents {
@@ -182,7 +186,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 		return "", err
 	}
 	now := time.Now().UTC()
-	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now, GoalID: goalID}
+	req := domain.Request{ID: newID(), Text: text, Status: domain.RequestPlanning, CreatedAt: now, GoalID: goalID, OfficeID: office}
 	// B12: the customer scope is stored BEFORE the request exists, so no task can ever run unscoped.
 	if err := o.linkCustomer(ctx, req.ID); err != nil {
 		return "", err
@@ -225,7 +229,7 @@ func (o *Orchestrator) submit(ctx context.Context, text string, preset *PlanResp
 	defer o.mu.Unlock()
 	// The background run keeps the lifetime of the orchestrator but carries the
 	// tenant of the request that started it.
-	rctx := WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID)
+	rctx := WithRequestOffice(WithRequestID(WithOrg(o.base, o.org(ctx)), req.ID), req.OfficeID)
 	rctx = WithCustomer(rctx, rs.customer)                           // B12: the run works for this customer (tools re-resolve it from the request id)
 	rctx = WithWorkPriority(rctx, WorkPriorityFrom(ctx))             // queue priority (orgqueue.go)
 	rctx = WithWorkPeople(WithWorkAgents(rctx, addressed...), asker) // D3: who receives its live events
@@ -497,7 +501,7 @@ func (o *Orchestrator) createTasks(ctx context.Context, rs *run, plan PlanRespon
 			reason = defaultAssignReason(rs.style.Locale, rs.agents[agent])
 		}
 		t := domain.Task{ID: ids[pt.Key], RequestID: rs.req.ID, Title: pt.Title, Description: pt.Description, AgentID: agent,
-			Status: domain.TaskPending, DependsOn: deps, CreatedAt: now, Depth: depth[pt.Key], AssignedReason: reason}
+			Status: domain.TaskPending, DependsOn: deps, CreatedAt: now, Depth: depth[pt.Key], AssignedReason: reason, OfficeID: rs.req.OfficeID}
 		if err := o.store.CreateTask(ctx, o.org(ctx), t); err != nil {
 			return nil, err
 		}
@@ -756,7 +760,7 @@ func (o *Orchestrator) completeTask(ctx context.Context, rs *run, t domain.Task,
 	rs.done[t.ID] = t
 	rs.mu.Unlock()
 	if !isHelperPart(t) { // a helper leaves nothing behind but its result and the log: no memory
-		if err := o.store.SetMemory(ctx, o.org(ctx), t.AgentID, domain.Memory{Scope: "agent", Key: "last_task", Value: t.Title + ": " + t.Output.Summary}); err != nil {
+		if err := o.store.SetMemory(ctx, o.org(ctx), t.AgentID, domain.Memory{Scope: o.agentMemoryScope(ctx, t.AgentID), Key: "last_task", Value: t.Title + ": " + t.Output.Summary}); err != nil {
 			o.log.Warn("set memory", "err", err)
 		}
 		if o.memSrc != nil {
@@ -798,6 +802,7 @@ func (o *Orchestrator) buildRunRequest(ctx context.Context, rs *run, t domain.Ta
 	if err != nil {
 		o.log.Warn("list memory", "err", err)
 	}
+	mem = o.scopedMemory(ctx, t.AgentID, mem) // only the memory of the office the request was asked from
 	for _, m := range mem {
 		rc.Memory = append(rc.Memory, MemoryEntry{Scope: m.Scope, Key: m.Key, Value: m.Value})
 	}
@@ -1360,7 +1365,7 @@ func (o *Orchestrator) emitMetrics(ctx context.Context) {
 
 // sendMessage stores a message and emits message.sent.
 func (o *Orchestrator) sendMessage(ctx context.Context, rs *run, from, to, kind, text string, taskID *string) {
-	m := domain.Message{ID: newID(), ConversationID: rs.convID, From: from, To: to, Kind: kind, Text: text, TaskID: taskID, TS: time.Now().UTC()}
+	m := domain.Message{ID: newID(), ConversationID: rs.convID, From: from, To: to, Kind: kind, Text: text, TaskID: taskID, TS: time.Now().UTC(), OfficeID: messageOffice(rs.req.OfficeID)}
 	if err := o.store.AddMessage(ctx, o.org(ctx), m); err != nil {
 		o.log.Warn("add message", "err", err)
 		return
@@ -1433,6 +1438,7 @@ func (o *Orchestrator) PostUserMessage(ctx context.Context, convID, text string)
 		to = assistantID
 	}
 	m := domain.Message{ID: newID(), ConversationID: convID, From: "user", To: to, Kind: "chat", Text: text, TS: time.Now().UTC()}
+	stampOffice(ctx, &m)
 	if err := o.store.AddMessage(ctx, o.org(ctx), m); err != nil {
 		return m, err
 	}

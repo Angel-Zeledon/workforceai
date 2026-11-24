@@ -371,6 +371,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	if err != nil {
 		return ChatTurn{}, err
 	}
+	agents = o.officeAgents(ctx, RequestOfficeFrom(ctx), agents) // the chat of an office routes only to the agents that work for it
 	var hidden map[string]bool
 	if domain.ChatConvOwner(stored) == "" { // D3: a shared chat (the office): its history as the person may read it
 		for _, a := range agents {
@@ -413,6 +414,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	t.userTS = time.Now().UTC()
 	m := domain.Message{ID: t.userMsgID, ConversationID: stored, From: "user", To: to, Kind: domain.MsgChat, Text: text,
 		TS: t.userTS, TurnID: t.id, AuthorID: t.author, AuthorName: t.authorName}
+	stampOffice(ctx, &m)
 	if att := attachmentsFrom(ctx); len(att) > 0 {
 		// the agents get the paths (they read with fs.read); the stored message keeps the user's own text
 		m.Files = o.resolveFiles(ctx, att, "attach")
@@ -431,6 +433,7 @@ func (o *Orchestrator) postChat(ctx context.Context, conversation, text string) 
 	rctx = WithActorRole(rctx, ActorRoleFrom(ctx, ""))
 	rctx = WithCustomer(rctx, customer) // B12: a request born in this turn is linked to the customer before it exists
 	rctx = WithGoal(rctx, goal)         // F1: and points to the goal
+	rctx = WithRequestOffice(rctx, RequestOfficeFrom(ctx)) // the turn works for the office it was written in
 	// Turns of one conversation run one after the other, in the order the messages arrived: answers never
 	// interleave between turns and a follow-up always sees what the previous turn said.
 	key := org + "|" + stored // the private thread of each person has its own queue
@@ -536,7 +539,11 @@ func (o *Orchestrator) chatHistory(ctx context.Context, t *chatTurn) []ChatHisto
 			mine = m.TS
 		}
 	}
+	msgs = officeHistory(ctx, msgs) // only what was said in the office this turn is asked from
 	msgs, summary := o.applyConvContext(ctx, t.conv, msgs) // /clear and /compact
+	if RequestOfficeFrom(ctx) != "" {
+		summary = nil // a /compact summary may hold what another office said: a turn of an office starts from its own messages
+	}
 	if len(t.hidden) > 0 && summary != nil {
 		// D3: the summary of a shared chat may quote an agent whose work this person does not see (written by a member)
 		summary = nil
@@ -1033,6 +1040,7 @@ func (o *Orchestrator) chatStore(ctx context.Context, m domain.Message, requestI
 	if requestID != "" {
 		m.RequestID = &requestID
 	}
+	stampOffice(ctx, &m)
 	if err := o.store.AddMessage(context.WithoutCancel(ctx), o.org(ctx), m); err != nil {
 		o.log.Warn("add chat message", "err", err)
 		return

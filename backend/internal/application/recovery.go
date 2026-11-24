@@ -445,7 +445,7 @@ func (o *Orchestrator) startReopen(ctx context.Context, rs *run, tasks []domain.
 	o.durable.mu.Unlock()
 	o.mu.Lock()
 	defer o.mu.Unlock()
-	rctx := WithRequestID(WithOrg(o.base, org), rs.req.ID)
+	rctx := WithRequestOffice(WithRequestID(WithOrg(o.base, org), rs.req.ID), rs.req.OfficeID)
 	if owned {
 		rctx = WithWorkPriority(rctx, PriorityProject)
 	}

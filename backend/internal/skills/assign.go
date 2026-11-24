@@ -69,7 +69,7 @@ func (s *Service) Assign(ctx context.Context, a Actor, agentID, skillID string) 
 		return err
 	}
 	if sk.OfficeID != "" {
-		if v := s.model(ctx, org); v.m != nil && v.m.Agent(agentID).OfficeID != sk.OfficeID {
+		if v := s.model(ctx, org); v.m != nil && !v.m.WorksFor(agentID, sk.OfficeID) {
 			return invalid("other_department", "skill belongs to another department")
 		}
 	}
@@ -128,10 +128,11 @@ func (s *Service) AgentSkills(ctx context.Context, agentID string) ([]AgentSkill
 	}
 	out := []AgentSkill{}
 	seen := map[string]bool{}
-	// a skill of a department only works for the agents of that department (an agent that moved loses it)
+	// a skill of a department only works for the agents of that department (an agent that moved loses it), and for an
+	// agent of several offices only in the one the request is asked from
 	m := s.model(ctx, org)
 	here := func(sk Skill) bool {
-		return sk.OfficeID == "" || !m.failed && (m.m == nil || m.m.Agent(agentID).OfficeID == sk.OfficeID)
+		return sk.OfficeID == "" || !m.failed && (m.m == nil || m.m.WorkOffice(agentID, application.RequestOfficeFrom(ctx)) == sk.OfficeID)
 	}
 	for _, a := range as {
 		if sk, ok := byID[a.SkillID]; ok && !seen[sk.ID] && here(sk) {
