@@ -467,6 +467,10 @@ const (
 	EvError          = "error"
 	EvMetricsUpdated = "metrics.updated"
 	EvHello          = "hello"
+	// Temporary helpers (additive, only with HELPERS_ENABLED): a split was proposed to the person who asked, and the
+	// group changed (state, a part, its spend; coalesced). Payload {request_id, agent_id, group}.
+	EvHelpersProposed = "helpers.proposed"
+	EvHelpersUpdated  = "helpers.updated"
 )
 
 // AuditLog is one entry of the append-only audit trail. Details carries

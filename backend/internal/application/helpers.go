@@ -35,6 +35,11 @@ type helperState struct {
 	mu    sync.Mutex // read-modify-write of groups (this process)
 	slots map[string]chan struct{}
 	locks sync.Map // key -> *sync.Mutex (one Launch per request at a time)
+
+	wmu    sync.Mutex           // waiters of open proposals (helpers_propose.go)
+	wait   map[string]chan bool // org|request -> the decision of the person (true = accepted)
+	nmu    sync.Mutex           // coalesced helpers.updated events
+	notify map[string]bool
 }
 
 // SetHelperLimits installs the plan lookup (policy.Tier of the organization) that bounds helpers at once and parts
@@ -451,6 +456,9 @@ func (o *Orchestrator) helperRefresh(ctx context.Context, groupID string) (domai
 	if fresh.ID != "" {
 		g.SpentUSD = fresh.SpentUSD
 	}
+	if helperChanged(prev, g) {
+		o.helperNotify(ctx, org, g.ID) // one coalesced helpers.updated
+	}
 	if prev.FinishedAt == nil && g.FinishedAt != nil {
 		o.rec.Audit(ctx, domain.AuditLog{Actor: "system", Action: "helpers.completed", Entity: "request", EntityID: g.RequestID, RequestID: g.RequestID,
 			Details: map[string]any{"group_id": g.ID, "status": g.Status, "count": g.Count, "cap_usd": g.CapUSD, "spent_usd": g.SpentUSD, "stop_reason": g.StopReason}})
@@ -478,10 +486,10 @@ func (o *Orchestrator) HelperProgress(ctx context.Context, requestID string) (do
 
 // ---- stop and retry ----
 
-// StopHelpers stops the group (part 0) or one part that has not started (part >= 1). A call already in flight
+// stopHelpers stops the group (part 0) or one part that has not started (part >= 1). A call already in flight
 // finishes (and counts); the parts that did not start are never run; the responsible joins what exists and says what
 // is missing. Idempotent.
-func (o *Orchestrator) StopHelpers(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
+func (o *Orchestrator) stopHelpers(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
 	org := o.org(ctx)
 	hs := o.helpers.store
 	if hs == nil {
@@ -559,9 +567,9 @@ func (o *Orchestrator) StopHelpers(ctx context.Context, groupID string, part int
 	return o.helperView(ctx, groupID)
 }
 
-// RetryHelperPart runs a failed or stopped part again (and the joining task after it). It refuses when the cap of
+// retryHelperPart runs a failed or stopped part again (and the joining task after it). It refuses when the cap of
 // the group is already spent.
-func (o *Orchestrator) RetryHelperPart(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
+func (o *Orchestrator) retryHelperPart(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
 	if !o.cfg.HelpersEnabled {
 		return domain.HelperGroup{}, fmt.Errorf("%w: helpers_disabled", domain.ErrForbidden)
 	}
@@ -639,4 +647,35 @@ func (o *Orchestrator) RetryHelperPart(ctx context.Context, groupID string, part
 		return domain.HelperGroup{}, err
 	}
 	return o.helperView(ctx, groupID)
+}
+
+// helperChanged says whether what a person sees of a group (its state, its parts) differs.
+func helperChanged(a, b domain.HelperGroup) bool {
+	if a.Status != b.Status || a.UnionTaskID != b.UnionTaskID || a.StopReason != b.StopReason || len(a.Parts) != len(b.Parts) {
+		return true
+	}
+	for i := range a.Parts {
+		if a.Parts[i].Status != b.Parts[i].Status || a.Parts[i].TaskID != b.Parts[i].TaskID {
+			return true
+		}
+	}
+	return false
+}
+
+// StopHelpers is stopHelpers plus the live notice of the change.
+func (o *Orchestrator) StopHelpers(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
+	g, err := o.stopHelpers(ctx, groupID, part, actor)
+	if err == nil {
+		o.helperNotify(ctx, o.org(ctx), groupID)
+	}
+	return g, err
+}
+
+// RetryHelperPart is retryHelperPart plus the live notice of the change.
+func (o *Orchestrator) RetryHelperPart(ctx context.Context, groupID string, part int, actor string) (domain.HelperGroup, error) {
+	g, err := o.retryHelperPart(ctx, groupID, part, actor)
+	if err == nil {
+		o.helperNotify(ctx, o.org(ctx), groupID)
+	}
+	return g, err
 }

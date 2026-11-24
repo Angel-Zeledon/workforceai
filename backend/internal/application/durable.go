@@ -74,6 +74,8 @@ type RunMeta struct {
 const (
 	GatePlanReview       = "plan_review"
 	GateCostConfirmation = "cost_confirmation"
+	// GateHelperProposal: a split among temporary helpers was proposed and the person has not decided (helpers_propose.go).
+	GateHelperProposal = "helper_proposal"
 )
 
 // RunGate is a human gate in progress. StartedAt fixes its deadline
@@ -93,6 +95,7 @@ type ChatLinkMeta struct {
 	Locale         string `json:"locale"`
 	ReassignFrom   string `json:"reassign_from,omitempty"`
 	ReassignTo     string `json:"reassign_to,omitempty"`
+	HelpersFree    bool   `json:"helpers_free,omitempty"`
 }
 
 func chatMeta(l *chatLink) *ChatLinkMeta {
@@ -100,7 +103,7 @@ func chatMeta(l *chatLink) *ChatLinkMeta {
 		return nil
 	}
 	return &ChatLinkMeta{ConversationID: l.conv, TurnID: l.turnID, ReplyTo: l.replyTo, Speaker: l.speaker, Locale: l.loc,
-		ReassignFrom: l.reassignFrom, ReassignTo: l.reassignTo}
+		ReassignFrom: l.reassignFrom, ReassignTo: l.reassignTo, HelpersFree: l.helpersFree}
 }
 
 func (m *ChatLinkMeta) link() *chatLink {
@@ -108,7 +111,7 @@ func (m *ChatLinkMeta) link() *chatLink {
 		return nil
 	}
 	return &chatLink{conv: m.ConversationID, turnID: m.TurnID, replyTo: m.ReplyTo, speaker: m.Speaker, loc: m.Locale,
-		reassignFrom: m.ReassignFrom, reassignTo: m.ReassignTo}
+		reassignFrom: m.ReassignFrom, reassignTo: m.ReassignTo, helpersFree: m.HelpersFree}
 }
 
 // CheckpointTaint is the taint of a task (what external content it read).
@@ -508,6 +511,17 @@ func (o *Orchestrator) resumeGated(ctx context.Context, rs *run, tasks []domain.
 	applyRemoved(rs, tasks)
 	o.emitResumed(ctx, rs, 0, len(tasks), gate.Kind)
 	switch gate.Kind {
+	case GateHelperProposal: // the person has not decided (or decided just before the restart): the stored group says
+		out, accepted, ok := o.helperAwait(ctx, rs, tasks, gate.StartedAt)
+		if !ok {
+			return
+		}
+		tasks = out
+		if accepted {
+			o.estimateAccepted(ctx, rs, tasks)
+		} else if !o.confirmEstimateFrom(ctx, rs, tasks, nil) {
+			return
+		}
 	case GatePlanReview:
 		if !o.reviewPlanSince(ctx, rs, tasks, gate.StartedAt) || !o.confirmEstimateFrom(ctx, rs, tasks, nil) {
 			return

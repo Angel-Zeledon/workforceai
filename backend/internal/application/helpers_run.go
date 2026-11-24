@@ -235,6 +235,7 @@ func (o *Orchestrator) helperEnter(ctx context.Context, rs *run, t domain.Task) 
 		}
 	}
 	release = func() { <-sem }
+	o.helperNotify(ctx, o.org(ctx), g.ID) // a part starts
 	if cur, err := hs.GetHelperGroup(ctx, o.org(ctx), g.ID); err == nil { // stopped while it waited for its slot
 		if why := helperStopReason(cur, t.Helper.Index); why != "" {
 			o.helperMarkCap(ctx, cur, why)
@@ -331,4 +332,5 @@ func (o *Orchestrator) helperAfterRun(ctx context.Context, t domain.Task) {
 	if _, err := o.helperRefresh(ctx, t.Helper.GroupID); err != nil {
 		o.log.Warn("helpers: refresh group", "group", t.Helper.GroupID, "err", err)
 	}
+	o.helperNotify(ctx, o.org(ctx), t.Helper.GroupID) // its spend and result
 }
