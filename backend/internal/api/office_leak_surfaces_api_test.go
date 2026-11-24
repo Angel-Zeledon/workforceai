@@ -103,8 +103,6 @@ func TestOfficeLeakOutboxFollowsTheRequestOffice(t *testing.T) {
 	}
 }
 
-var _ = json.Marshal
-
 // ---- 2. code runs ----
 
 func TestOfficeLeakCodeRunsFollowTheTaskAndRequest(t *testing.T) {
@@ -249,5 +247,48 @@ func TestOfficeLeakStalledWorkFollowsTheTaskOffice(t *testing.T) {
 	}
 	if got := scan(w.chief); !strings.Contains(got, "SECRETO-tarea") {
 		t.Fatalf("the scan of the member lacks the office's task: %s", got)
+	}
+}
+
+// ---- 5. rehearsals ----
+
+func TestOfficeLeakRehearsalsFollowTheRequestOffice(t *testing.T) {
+	w := newLeakWorld(t)
+	e, now := w.e, time.Now().UTC()
+	for _, a := range []domain.RehearsalAction{
+		{ID: "ra-SECRETO", RequestID: "req-SECRETO", TaskID: "task-SECRETO", Preview: map[string]string{"asunto": "SECRETO-ensayo"}},
+		{ID: "ra-ABIERTO", RequestID: "req-ABIERTO", TaskID: "task-ABIERTO", Preview: map[string]string{"asunto": "ABIERTO-ensayo"}},
+		// no request named: the task it came from still says the office
+		{ID: "ra-TAREA", TaskID: "task-SECRETO", Preview: map[string]string{"asunto": "SECRETO-ensayo-tarea"}},
+	} {
+		a.AgentID, a.Tool, a.Action, a.Source, a.Scope, a.WouldDecision, a.Risk = "assistant", "email", "send", "gateway", "request", "approve", "high"
+		a.Recipients, a.Flags, a.CreatedAt = []string{}, []string{}, now
+		if err := e.store.AddRehearsalAction(context.Background(), w.org, a); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for who, tok := range map[string]string{"admin outside the office": w.owner, "member of another office": w.ana, "nobody's": w.luis} {
+		for _, p := range []string{"/rehearsal/actions", "/rehearsal/actions?limit=5", "/rehearsal/actions?request_id=req-SECRETO", "/rehearsal/actions?agent_id=assistant"} {
+			if w.sees(tok, "GET", p, "SECRETO", nil) {
+				t.Fatalf("%s: GET %s shows the private office's rehearsal", who, p)
+			}
+		}
+		if !w.sees(tok, "GET", "/rehearsal/actions", "ABIERTO-ensayo", nil) {
+			t.Fatalf("%s: General's rehearsal is hidden", who)
+		}
+		if w.sees(tok, "GET", "/rehearsal/agents", "SECRETO", nil) {
+			t.Fatalf("%s: /rehearsal/agents shows the private office's rehearsal", who)
+		}
+	}
+	if resp, _ := e.do("POST", api1+"/rehearsal/actions/ra-SECRETO/verdict", w.owner, map[string]any{"verdict": "would_approve"}, nil); resp.StatusCode != 404 {
+		t.Fatalf("a verdict on a hidden rehearsal = %d, want 404", resp.StatusCode)
+	}
+	for _, p := range []string{"/rehearsal/actions", "/rehearsal/actions?request_id=req-SECRETO"} {
+		if !w.sees(w.chief, "GET", p, "SECRETO-ensayo", nil) {
+			t.Fatalf("the member does not see GET %s", p)
+		}
+	}
+	if !w.sees(w.chief, "GET", "/rehearsal/actions", "SECRETO-ensayo-tarea", nil) {
+		t.Fatal("the member does not see the rehearsal that names only its task")
 	}
 }

@@ -133,6 +133,7 @@ func (s *server) rehearsalActions(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !ws.open() {
+		ws.preloadTasks()
 		v = firstN(slices.DeleteFunc(v, func(a domain.RehearsalAction) bool { return !ws.seesRehearsal(a) }), want)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"items": v})

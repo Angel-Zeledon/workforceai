@@ -53,9 +53,14 @@ func (ws *workScope) seesQuestion(q application.Question) bool {
 	return ws.agent(q.AgentID) && ws.taskID(q.TaskID) || ws.viewer(q.AskedFor)
 }
 
-// seesRehearsal: the work of the agent, or the request it belongs to (its requester sees its rehearsal report).
+// seesRehearsal: what belongs to a request is the request's (whoever asked for it sees its rehearsal report, and an
+// agent's visible work for a private office's request does not open it); one with no request is the work of its agent
+// and of the office of its task.
 func (ws *workScope) seesRehearsal(a domain.RehearsalAction) bool {
-	return ws.agent(a.AgentID) || a.RequestID != "" && ws.request(a.RequestID)
+	if a.RequestID != "" {
+		return ws.request(a.RequestID)
+	}
+	return ws.agent(a.AgentID) && ws.taskID(a.TaskID)
 }
 
 // seesDebate: a request's debate is its request's; another one needs the work of every participant, unless the
