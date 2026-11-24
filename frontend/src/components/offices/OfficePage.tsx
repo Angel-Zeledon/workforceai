@@ -16,7 +16,10 @@ import { HireWizard } from "../agents/HireWizard";
 import { OfficesPanel } from "../org/OfficesPanel";
 import { TeamMemory } from "../org/TeamMemory";
 import { PositionsScreen } from "../positions/PositionsScreen";
-import { btnGhost, btnPrimary } from "../org/shared";
+import { btnDanger, btnGhost, btnPrimary } from "../org/shared";
+import { SaveTemplatePanel } from "../teams/SaveTemplatePanel";
+
+const menuItem = "block w-full rounded-md px-3 py-2 text-left text-[13px] font-semibold text-ink2 hover:bg-panel2 hover:text-ink";
 
 /** `/offices/<id>`: one office with its People, Agents, Positions, Skills, Files and Memory. Each tab reuses the existing screen. */
 export function OfficePage({ id }: { id: string }) {
@@ -31,6 +34,9 @@ function Page({ id }: { id: string }) {
   const [data, setData] = useState<OfficesResponse | null>(null);
   const [error, setError] = useState(false);
   const [hire, setHire] = useState(false);
+  const [menu, setMenu] = useState(false);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const [people, setPeople] = useState<PersonRef[]>([]);
   const list = useRef<HTMLDivElement>(null);
 
@@ -69,7 +75,24 @@ function Page({ id }: { id: string }) {
             <h1 className="truncate font-display text-[18px] font-semibold leading-tight text-ink sm:text-xl" data-testid="office-page-name">{name}</h1>
             {o && <p className="text-[12.5px] text-mute">{t(`offices.badge.${officeBadge(o)}`)} · {t("offices.leads", { names: o.leads.map((l) => l.name || "?").join(", ") || t("org.noHead") })}</p>}
           </div>
-          {canHire && <button type="button" data-testid="office-hire" onClick={() => setHire(true)} className={btnPrimary}>{t("hire.open")}</button>}
+          <div className="flex items-center gap-2">
+            {canHire && <button type="button" data-testid="office-hire" onClick={() => setHire(true)} className={btnPrimary}>{t("hire.open")}</button>}
+            {o && !o.general && (o.can_manage || (o.is_member && !o.is_lead) || data?.me.admin) && (
+              <div className="relative">
+                <button type="button" data-testid="office-menu" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu((m) => !m); setConfirmClose(false); }} className={btnGhost}>{t("ofp.menu")}</button>
+                {menu && (
+                  <div role="menu" data-testid="office-menu-list" className="absolute right-0 z-20 mt-1 grid min-w-[220px] gap-0.5 rounded-[10px] border border-line bg-panel p-1 shadow-pop">
+                    {o.can_enter && o.can_manage && <button type="button" role="menuitem" data-testid="office-menu-save" className={menuItem} onClick={() => { setMenu(false); setSaveOpen(true); }}>{t("otpl.save.button")}</button>}
+                    {o.is_member && !o.is_lead && <button type="button" role="menuitem" data-testid="office-menu-leave" className={menuItem}
+                      onClick={() => { setMenu(false); officesApi.removeMember(id, data?.me.user_id ?? "").then(load).catch(() => setError(true)); }}>{t("offices.leave")}</button>}
+                    {data?.me.admin && (confirmClose
+                      ? <button type="button" data-testid="office-close-confirm" className={btnDanger} onClick={() => { officesApi.disable(id).then(() => router.push("/offices")).catch(() => setError(true)); }}>{t("offices.closeConfirm")}</button>
+                      : <button type="button" role="menuitem" data-testid="office-menu-close" className={`${menuItem} text-red-600`} onClick={() => setConfirmClose(true)}>{t("offices.close")}</button>)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         </div>
         <div ref={list} role="tablist" aria-label={t("ofp.tabs")} onKeyDown={onKey} className="wf-hscroll mt-3 flex gap-1 overflow-x-auto">
           {OFFICE_PAGE_TABS.map((k) => (
@@ -104,6 +127,7 @@ function Page({ id }: { id: string }) {
           </>
         )}
       </div>
+      {saveOpen && o && <SaveTemplatePanel officeId={o.id} officeName={o.general ? t("offices.general") : o.name} onClose={() => setSaveOpen(false)} />}
       {hire && <HireWizard officeId={id} onClose={() => { setHire(false); load(); }} />}
     </div>
   );

@@ -4,6 +4,7 @@ import qrcode from "qrcode-generator";
 import { useT } from "@/lib/i18n";
 import { AuthError, logoutEverywhere, mfaDisable, mfaEnable, mfaSetup, useSession, type MfaSetup } from "@/lib/session";
 import { Btn } from "../ui";
+import { TeamMemory } from "../org/TeamMemory";
 import { ErrorLine, inputCls } from "../connections/shared";
 
 function qrSvg(uri: string): string {
@@ -110,6 +111,11 @@ export function AccountSecurity() {
       <Card title={t("mfa.sessionsTitle")}>
         <p className="text-[12.5px] leading-relaxed text-mute">{t("mfa.sessionsBody")}</p>
         <Btn kind="danger" onClick={() => { logoutEverywhere().then(() => { window.location.href = "/login"; }); }} data-testid="logout-everywhere">{t("mfa.logoutAll")}</Btn>
+      </Card>
+
+      <Card title={t("offices.myMemory")}>
+        <p className="mb-2 text-[12px] text-mute">{t("offices.myMemory.hint")}</p>
+        <TeamMemory scope="person" refId="" />
       </Card>
     </div>
   );
