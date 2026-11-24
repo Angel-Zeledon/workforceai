@@ -216,3 +216,18 @@ func VisibleToCustomer(d Doc, customerID string) bool {
 
 // UserNotePrefix starts the id of a note a person wrote (RememberNote).
 const UserNotePrefix = "note_user_"
+
+type officeVisibleKey struct{}
+
+// WithOfficeVisible makes List, Search and Delete leave out the documents of the offices fn says the person cannot
+// see (a private office they are not a member of). Without it nothing is left out: the agent's own reads
+// (Recall, Open) never carry it.
+func WithOfficeVisible(ctx context.Context, fn func(office string) bool) context.Context {
+	return context.WithValue(ctx, officeVisibleKey{}, fn)
+}
+
+// officeHidden reports whether ctx hides the documents of an office.
+func officeHidden(ctx context.Context, office string) bool {
+	fn, ok := ctx.Value(officeVisibleKey{}).(func(string) bool)
+	return ok && office != "" && !fn(office)
+}

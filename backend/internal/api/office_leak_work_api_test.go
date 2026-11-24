@@ -24,7 +24,7 @@ func officesWorldSealed(t *testing.T) (e *env, owner, ana, marta, luis, ventas, 
 }
 
 // officesWorldSealedDocs is officesWorldSealed that also hands out the long-term memory store, to seed documents.
-func officesWorldSealedDocs(t *testing.T) (e *env, owner, ana, marta, luis, ventas, soporte, org string, docs *longmem.MemStore) {
+func officesWorldSealedDocs(t *testing.T, tweak ...func(*api.Deps)) (e *env, owner, ana, marta, luis, ventas, soporte, org string, docs *longmem.MemStore) {
 	t.Helper()
 	var d *api.Deps
 	e = newEnv(t, opts{auth: true, orgchart: true, away: true, code: true, v2: true, quality: true, ws: true, trust: true, deps: func(x *api.Deps) {
@@ -32,6 +32,9 @@ func officesWorldSealedDocs(t *testing.T) (e *env, owner, ana, marta, luis, vent
 		docs = longmem.NewMemStore()
 		x.Memory = longmem.New(longmem.Config{Docs: docs, Retriever: &longmem.FTS{Docs: docs}})
 		x.Commands = &api.CommandsDeps{}
+		for _, f := range tweak {
+			f(x)
+		}
 		d = x
 	}})
 	o := e.register("owner-ao@example.com", "OwnerAO")
