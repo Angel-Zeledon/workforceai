@@ -30,7 +30,7 @@ export function OfficeCards({ refresh = 0 }: { refresh?: number }) {
               <span data-testid={`office-badge-${o.id}`} className="shrink-0 text-[12px] text-mute">{t(`offices.badge.${badge}`)}</span>
             </span>
             <span className="mt-1 block text-[12px] text-mute">{t("offices.leads", { names: o.leads.map((l) => l.name || "?").join(", ") || t("org.noHead") })}</span>
-            <span className="mt-0.5 block text-[12px] text-mute">{o.can_enter ? t("offices.counts", { people: o.member_count, agents: o.agents.length }) : t("offices.countsPeople", { people: o.member_count })}</span>
+            <span className="mt-0.5 block text-[12px] text-mute">{o.can_enter ? t("offices.counts", { people: t("count.people", { count: o.member_count }), agents: t("count.agents", { count: o.agents.length }) }) : t("count.people", { count: o.member_count })}</span>
             {!o.can_enter && <span data-testid={`office-door-${o.id}`} className="mt-1 block text-[12px] text-mute">{t("offices.closedDoor")}</span>}
           </>
         );

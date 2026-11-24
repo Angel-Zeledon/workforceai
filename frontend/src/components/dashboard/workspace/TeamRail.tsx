@@ -70,7 +70,7 @@ export function TeamRail({ target, onPick, onPanel, className = "" }: { target: 
   const [q, setQ] = useState("");
   const needs = useMemo(() => needsYouAgentIds(Object.values(approvals), Object.values(questions ?? {})), [approvals, questions]);
   const sections = useMemo(() => groupAgents(order, agents, needs, q), [order, agents, needs, q]);
-  const working = Object.values(agents).filter((a) => ["thinking", "working", "talking", "reviewing", "waiting"].includes(a.state)).length;
+  const working = order.map((id) => agents[id]).filter((a) => a && ["thinking", "working", "talking", "reviewing", "waiting"].includes(a.state)).length;
   return (
     <nav aria-label={t("work.team.title")} data-testid="team-rail" data-tour="dashboard.team" className={`flex min-h-0 flex-col ${className}`}>
       <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">

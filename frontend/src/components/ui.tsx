@@ -99,7 +99,7 @@ export function Card({ title, right, children, className = "" }: { title?: React
     <section className={`rounded-xl border border-line bg-panel shadow-pop ${className}`}>
       {title !== undefined && (
         <header className="flex items-center justify-between gap-2 border-b border-line px-3 py-2.5 sm:px-4 sm:py-3">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.08em] text-mute">{title}</h3>
+          <h3 className="text-[13px] font-semibold text-ink">{title}</h3>
           {right}
         </header>
       )}

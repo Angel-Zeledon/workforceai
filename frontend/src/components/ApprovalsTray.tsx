@@ -24,12 +24,15 @@ export function ApprovalsTray() {
   const pendingApprovals = Object.values(approvals).filter((a) => a.status === "pending").sort((a, b) => +new Date(b.created_at) - +new Date(a.created_at));
   const questions = Object.values(questionsById).filter((q) => q.status === "open").sort((a, b) => +new Date(a.created_at) - +new Date(b.created_at));
   const total = pendingTotal(approvals, questionsById); // the same number as the menu's Pendientes
-  const [open, setOpen] = useState(true);
-  const seen = useRef(0);
+  const [open, setOpen] = useState(false);
+  const seen = useRef<number | null>(null);
+  const loaded = useStore((s) => s.loaded);
   useEffect(() => {
-    if (total > seen.current) setOpen(true);
+    if (!loaded) return; // the first real list decides, not the empty one before it
+    // a long list stays folded (it covered half the office; the pill pulses and shows the number): one or two open by themselves
+    if (total > (seen.current ?? 0) && total <= 2) setOpen(true);
     seen.current = total;
-  }, [total]);
+  }, [total, loaded]);
   if (!total) return null;
   const pending = pendingApprovals;
   return (

@@ -216,7 +216,7 @@ export const useStore = create<State>((set, get) => ({
         set((s) => ({
           requests: {
             ...s.requests,
-            [p.request_id]: s.requests[p.request_id] || { id: p.request_id, text: p.text, status: "planning", created_at: f.ts, report_id: null, cost_usd: 0 },
+            [p.request_id]: s.requests[p.request_id] || { id: p.request_id, text: p.text, status: "planning", created_at: f.ts, report_id: null, cost_usd: 0, ...(p.office_id ? { office_id: String(p.office_id) } : {}) },
           },
         }));
         break;

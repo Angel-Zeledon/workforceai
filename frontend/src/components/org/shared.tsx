@@ -7,7 +7,7 @@ import { Icon } from "../icons";
 
 export const inputCls = "w-full rounded-lg border border-line-strong bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-accent";
 export const btnPrimary = "inline-flex min-h-10 items-center justify-center rounded-md bg-accent px-4 py-2 sm:min-h-0 text-xs font-semibold text-white disabled:opacity-50";
-export const btnGhost = "inline-flex min-h-10 items-center justify-center rounded-md border border-line px-4 py-2 sm:min-h-0 text-xs font-semibold text-mute hover:text-ink disabled:opacity-40";
+export const btnGhost = "inline-flex min-h-10 items-center justify-center rounded-md border border-line px-4 py-2 sm:min-h-0 text-xs font-semibold text-ink2 hover:text-ink disabled:opacity-40";
 export const btnDanger = "inline-flex min-h-10 items-center justify-center rounded-md border border-red-400/60 px-4 py-2 sm:min-h-0 text-xs font-semibold text-red-600 hover:bg-red-500/10 disabled:opacity-40";
 
 export interface MemberAt extends ChartMember { dept_id: string; dept_name: string }

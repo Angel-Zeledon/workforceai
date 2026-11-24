@@ -16,8 +16,9 @@ function draftOf(p: AgentProfile): ProfileDraft {
   return { instructions: p.instructions, creativity: p.creativity, skills: p.skills, tone: p.tone };
 }
 
-/** "Work profile" section: instructions, creativity, tone, skills, plus the version history with restore. */
-export function ProfileSheet({ id }: { id: string }) {
+/** "Work profile" section: instructions, creativity, tone and the topics it handles (the tags that help choose who gets a request),
+ *  plus the version history with restore. `part`: "who" shows the profile only, "tags" the topics only (the sheet's two tabs). */
+export function ProfileSheet({ id, part = "all" }: { id: string; part?: "all" | "who" | "tags" }) {
   const { t } = useT();
   const [profile, setProfile] = useState<AgentProfile | null>(null);
   const [draft, setDraft] = useState<ProfileDraft | null>(null);
@@ -65,8 +66,9 @@ export function ProfileSheet({ id }: { id: string }) {
 
   return (
     <div className="space-y-3" data-testid="agent-profile-section">
-      <Card title={t("profile.title")} right={<span className="font-mono text-[10px] text-mute">{profile.version ? t("profile.version", { v: profile.version }) : t("profile.neverEdited")}</span>}>
+      <Card title={part === "tags" ? t("profile.topics") : t("profile.title")} right={part === "tags" ? undefined : <span className="font-mono text-[10px] text-mute">{profile.version ? t("profile.version", { v: profile.version }) : t("profile.neverEdited")}</span>}>
         <div className="space-y-3">
+          {part !== "tags" && <>
           <label className="block">
             <span className={label}>{t("profile.instructions")}</span>
             <textarea data-testid="agent-profile-instructions" rows={6} value={draft.instructions} onChange={(e) => set({ instructions: e.target.value })}
@@ -89,8 +91,10 @@ export function ProfileSheet({ id }: { id: string }) {
               <ToneSelect testid="agent-profile-tone" allowInherit value={draft.tone as ToneCode | ""} onChange={(v) => set({ tone: v })} label={t("profile.tone")} />
             </div>
           </div>
-          <div data-testid="agent-profile-skills">
-            <span className={label}>{t("profile.skills")}</span>
+          </>}
+          {part !== "who" && <div data-testid="agent-profile-skills">
+            <span className={label}>{t("profile.topics")}</span>
+            <p className="mb-1 text-[11px] text-mute">{t("profile.topics.hint")}</p>
             {profile.role_skills.length > 0 && (
               <div className="mb-1 flex flex-wrap gap-1" aria-label={t("profile.roleSkills")}>
                 {profile.role_skills.map((s) => <span key={s} title={t("profile.roleSkills")} className="rounded border border-line px-1.5 py-0.5 text-[10px] text-mute">{s}</span>)}
@@ -109,7 +113,7 @@ export function ProfileSheet({ id }: { id: string }) {
                 className="min-w-0 flex-1 rounded-xl border border-line bg-panel2 px-3 py-1.5 text-xs outline-none focus:border-accent" />
               <Btn data-testid="agent-profile-skill-add" onClick={addTag} disabled={!skillInput.trim()}>{t("profile.add")}</Btn>
             </div>
-          </div>
+          </div>}
           {issues.length > 0 && <ul data-testid="agent-profile-issues" className="space-y-0.5 text-[11px] text-err">{issues.map((i, n) => <li key={n}>{issueText(i)}</li>)}</ul>}
           {err && <div role="alert" data-testid="agent-profile-error" className="text-[11px] text-err">{err}</div>}
           <div className="flex items-center gap-2">

@@ -134,7 +134,7 @@ export function createPeople(host: PeopleHost): People {
           }
           const away = p.status === "away";
           const h = id.split("").reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
-          const look = lookOf(softenColor(hslToNum(colorFor(id))), humanSkin(SKINS[h % SKINS.length]), HAIRS[(h >> 3) % HAIRS.length], STYLES[(h >> 5) % STYLES.length], "");
+          const look = lookOf(softenColor(hslToNum(colorFor(id))), humanSkin(SKINS[h % SKINS.length]), HAIRS[(h >>> 3) % HAIRS.length], STYLES[(h >>> 5) % STYLES.length], "");
           const f = facing(d.heading);
           drawPerson(d.g, personPose(d.moving && !reduce, clock + d.t0), look, f.dir, f.back, { mug: false, badge: "", docs: false, selectedColor: null, t: clock });
           // the status ring on the floor, like the 3D figure's

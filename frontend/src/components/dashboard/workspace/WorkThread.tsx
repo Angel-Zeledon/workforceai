@@ -9,6 +9,8 @@ import { BlockBoundary } from "./BlockBoundary";
 import { Composer } from "./Composer";
 import { RunBlock } from "./RunBlock";
 import { composerHidden, convOf, exampleRoles, inProgress, OFFICE_CONV, type PanelLayout } from "./workspaceLogic";
+import { useCurrentOffice } from "@/lib/currentOffice";
+import { ALL_OFFICES, inOffice } from "@/lib/currentOfficeLogic";
 import { HelperProposal, useProposals, useProposedRequests } from "../../helpers/HelperProposal";
 
 const KNOWN_ROLES = new Set(["sales", "analyst", "accounting", "hr", "legal", "operations", "assistant"]);
@@ -67,9 +69,12 @@ export function WorkThread({ target, onTarget, autoFocus, layout = "none", openA
   const boxHidden = composerHidden(layout, target, openAgent);
   const loaded = useStore((s) => s.loaded);
   const connected = useStore((s) => s.connected);
-  const requests = useStore((s) => s.requests);
+  const allRequests = useStore((s) => s.requests);
+  const { current } = useCurrentOffice(); // only the requests of the office on screen
+  const requests = useMemo(() => (current === ALL_OFFICES ? allRequests : Object.fromEntries(Object.entries(allRequests).filter(([, r]) => inOffice(current, r.office_id)))), [allRequests, current]);
   const tasks = useStore((s) => s.tasks);
-  const office = useStore((s) => s.chat[OFFICE_CONV]) ?? NO_MSGS;
+  const chat = useStore((s) => s.chat[OFFICE_CONV]) ?? NO_MSGS;
+  const office = useMemo(() => (current === ALL_OFFICES ? chat : chat.filter((m) => inOffice(current, m.office_id))), [chat, current]);
   const loadChat = useStore((s) => s.loadChat);
   const setDraft = useStore((s) => s.setDraft);
   const conv = convOf(target);

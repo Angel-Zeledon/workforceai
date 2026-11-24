@@ -110,7 +110,7 @@ export function HireWizard({ onClose, officeId }: { onClose: () => void; officeI
   const reset = () => { setDone(null); setStep(1); setDraft((d) => ({ ...emptyDraft(d.office), office: d.office })); setErrors({}); };
   const shownCatalog = (catalog ?? []).filter((c) => !filter.trim() || `${c.title} ${c.description}`.toLowerCase().includes(filter.trim().toLowerCase()));
 
-  const asking = draft.visibility === "people" ? t("hire.asks.people", { n: draft.people.length })
+  const asking = draft.visibility === "people" ? t("hire.asks.people", { count: draft.people.length })
     : draft.visibility === "directory" || isGeneralOffice(draft.office) && draft.visibility === "office" ? t("hire.asks.company") : t("hire.asks.office", { name: officeName });
 
   return (
@@ -148,7 +148,7 @@ export function HireWizard({ onClose, officeId }: { onClose: () => void; officeI
                 <label key={o.id} className={`${row} ${draft.office === o.id ? "border-accent bg-accent-soft" : "border-line hover:border-accent/50"}`}>
                   <input type="radio" name="hire-office" className="mt-0.5 accent-[#0A66C2]" checked={draft.office === o.id} onChange={() => set((d) => pickOffice(d, o.id))} data-testid={`hire-office-${o.id}`} />
                   <span className="min-w-0"><span className="block text-[13px] font-semibold">{officeLabel({ id: o.id, name: o.name }, general)}</span>
-                    <span className="block text-[12px] text-mute">{o.general ? t("offices.general.hint") : t("offices.counts", { people: o.member_count, agents: o.agents.length })}</span></span>
+                    <span className="block text-[12px] text-mute">{o.general ? t("offices.general.hint") : t("offices.counts", { people: t("count.people", { count: o.member_count }), agents: t("count.agents", { count: o.agents.length }) })}</span></span>
                 </label>
               ))}
               {offices.length === 0 && <p role="alert" className="text-[12px] font-semibold text-red-600">{t("hire.err.office")}</p>}

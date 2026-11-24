@@ -36,11 +36,11 @@ function AgentTag({ id }: { id: string }) {
   const energy = useEnergy(id);
   const ref = useRegister(`agent:${id}`, "agent", id);
   const rehearsing = useRehearsal((s) => !!s.enabled[id]); // B9: "Ensayo" chip over the desk
+  const away = useBusyElsewhere(id); // "ocupado en Legal" when its work is for another office
   if (!agent) return null;
   const meta = { color: view.color };
   const scale = labelSize === "s" ? 0.85 : labelSize === "l" ? 1.2 : 1;
   const sm = stateMeta(agent.state);
-  const away = useBusyElsewhere(id); // "ocupado en Legal" when its work is for another office
   const showEnergyChip = !!energy && (energy.paused || energy.level !== "ok");
   const exp = selected || hover;
   const busy = ["working", "reviewing", "thinking", "awaiting_approval"].includes(agent.state) && agent.progress > 0;

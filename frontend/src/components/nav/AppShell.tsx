@@ -230,6 +230,7 @@ export function AppShell({ children }: { children: ReactNode }) {
                 })}
               </div>
             )}
+            {officeSelect && <span data-testid="office-select-desktop" className="hidden sm:block"><OfficeSelect /></span>}
           </div>
           <div className="flex shrink-0 items-center gap-x-2 text-[11px] text-mute sm:gap-x-3">
             {metrics && (
