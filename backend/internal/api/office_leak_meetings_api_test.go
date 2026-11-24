@@ -2,6 +2,7 @@ package api_test
 
 import (
 	"context"
+	"encoding/json"
 	"strings"
 	"testing"
 	"time"
@@ -115,10 +116,54 @@ func TestOfficeLeakMeetingsAPI(t *testing.T) {
 	if resp, raw := e.do("POST", api1+"/meetings/"+secB+"/cancel", marta, map[string]any{}, nil); resp.StatusCode != 200 {
 		t.Fatalf("the member cannot cancel the office's meeting: %d %.300s", resp.StatusCode, raw)
 	}
+	// the rooms: whoever does not see a private office's meeting still sees the room taken (start and end), without
+	// its id or its title; who sees it gets all of it
+	var rooms []map[string]any
+	if raw := e.do2("GET", api1+"/meetings/rooms", owner); json.Unmarshal(raw, &rooms) != nil || len(rooms) == 0 {
+		t.Fatalf("no rooms: %s", raw)
+	}
+	roomID, _ := rooms[0]["id"].(string)
+	soon := time.Now().UTC().Add(30 * time.Minute)
+	rm, err := msvc.Create(application.WithRequestOffice(ctx, soporte), org, e.userID(marta), meetings.CreateInput{Title: "SECRETO-sala", Room: roomID, Start: soon, End: soon.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	roomOf := func(token string) (string, map[string]any) {
+		raw := e.do2("GET", api1+"/meetings/rooms", token)
+		var rs []map[string]any
+		_ = json.Unmarshal(raw, &rs)
+		for _, r := range rs {
+			if r["id"] == roomID {
+				next, _ := r["next"].(map[string]any)
+				return string(raw), next
+			}
+		}
+		t.Fatalf("room %s missing: %s", roomID, raw)
+		return "", nil
+	}
+	for name, tok := range map[string]string{"admin not in the office": owner, "nobody's": luis, "organizer of another": ana} {
+		raw, next := roomOf(tok)
+		if strings.Contains(raw, "SECRETO") || strings.Contains(raw, rm.ID) {
+			t.Fatalf("%s: GET /meetings/rooms shows the private meeting: %.500s", name, raw)
+		}
+		if next == nil || next["start"] == nil || next["end"] == nil || next["start"] == "" {
+			t.Fatalf("%s: the room does not show as taken: %.500s", name, raw)
+		}
+	}
+	if _, next := roomOf(marta); next == nil || next["id"] != rm.ID || next["title"] != "SECRETO-sala" {
+		t.Fatalf("the member does not see the meeting of the room: %v", next)
+	}
 	// General's meeting is everybody's
 	for _, tok := range []string{owner, ana, luis, marta} {
 		if resp, raw := e.do("GET", api1+"/meetings/"+open, tok, nil, nil); resp.StatusCode != 200 {
 			t.Fatalf("the open meeting: %d %.300s", resp.StatusCode, raw)
 		}
 	}
+}
+
+// do2 is a GET that returns the body.
+func (e *env) do2(method, path, token string) []byte {
+	e.t.Helper()
+	_, raw := e.do(method, path, token, nil, nil)
+	return raw
 }
