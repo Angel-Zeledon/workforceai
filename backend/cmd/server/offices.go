@@ -120,6 +120,11 @@ func wireDepartments(w departmentWiring) *offices.Service {
 	if w.Conns != nil {
 		w.Conns.AgentOffice = agentOffices{svc: svc}.AgentOffice // D3: a department's connections serve its agents only
 	}
+	svc.SetOnOfficeRemoved(func(c context.Context, org, agentID, officeID string) {
+		if _, err := w.Orch.BlockOfficeTasks(c, org, agentID, officeID); err != nil {
+			w.Log.Warn("offices: block tasks of a removed agent", "agent", agentID, "office", officeID, "err", err)
+		}
+	})
 	w.Orch.SetOfficeScope(agentOffices{svc: svc}) // the office a request is asked from scopes agents, memory and files
 	w.Orch.SetAgentOffice(agentOffices{svc: svc}.AgentOffice) // F6: a stalled task is reassigned inside its department
 	if w.AuthOn && w.Drive != nil {

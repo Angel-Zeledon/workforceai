@@ -573,6 +573,9 @@ func (o *Orchestrator) runTaskLocked(ctx context.Context, rs *run, t domain.Task
 // runTaskOnce is one run of a task: guards, budget, the runtime call, tools and completion. asked=true means the
 // agent asked a person for help instead: the task is needs_input and runTask waits for the answer.
 func (o *Orchestrator) runTaskOnce(ctx context.Context, rs *run, t domain.Task) (Outcome, bool) {
+	if out, handled := o.officeGate(ctx, rs, t); handled { // taken out of the request's office before starting
+		return out, false
+	}
 	if t.Helper != nil { // temporary helpers (helpers_run.go): stopped groups, the cap and the slots; the run itself is restricted below
 		hctx, release, out, handled := o.helperEnter(ctx, rs, t)
 		if handled {
