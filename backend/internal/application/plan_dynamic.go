@@ -135,6 +135,10 @@ type NewTaskSpec struct {
 	Description string
 	AgentID     string
 	DependsOn   []string
+	// Helper (helpers.go) marks the task as a part of a temporary helper group; AssignedReason overrides the default
+	// "Added by an approved plan change".
+	Helper         *domain.TaskHelper
+	AssignedReason string
 }
 
 // RunAmendment is a change of the task set of a running request.
@@ -312,7 +316,10 @@ func (o *Orchestrator) AmendRun(ctx context.Context, requestID string, a RunAmen
 			}
 			t := domain.Task{ID: id, RequestID: requestID, Title: strings.TrimSpace(n.Title), Description: n.Description, AgentID: agent,
 				Status: domain.TaskPending, DependsOn: deps[id], CreatedAt: now, Depth: d,
-				AssignedReason: "Added by an approved plan change"}
+				AssignedReason: "Added by an approved plan change", Helper: n.Helper}
+			if n.AssignedReason != "" {
+				t.AssignedReason = n.AssignedReason
+			}
 			fresh = append(fresh, t)
 			freshByID[id] = t
 		}

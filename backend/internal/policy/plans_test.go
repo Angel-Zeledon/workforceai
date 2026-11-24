@@ -50,3 +50,27 @@ func TestLegacyPaidPlanHasNoPlanLimits(t *testing.T) {
 		t.Fatal("AtLimit")
 	}
 }
+
+func TestHelperLimitsByPlan(t *testing.T) {
+	cases := []struct {
+		plan             string
+		perOrg           int
+		wantPar, wantMax int
+	}{
+		{PlanFree, 8, 3, 6},
+		{PlanPro, 8, 6, 20},
+		{PlanMax, 8, 8, 50},
+		{PlanMax, 4, 4, 50}, // never more than MAX_PARALLEL_PER_ORG
+		{PlanPro, 2, 2, 20},
+		{PlanFree, 0, 3, 6},  // no per-organization cap configured
+		{PlanPaid, 8, 8, 50}, // legacy: system maximums, still bounded by the organization
+		{"unknown", 5, 5, 50},
+	}
+	for _, c := range cases {
+		tier, _ := TierOf(c.plan)
+		p, m := HelperLimits(tier, c.perOrg)
+		if p != c.wantPar || m != c.wantMax {
+			t.Errorf("%s/%d: got %d/%d, want %d/%d", c.plan, c.perOrg, p, m, c.wantPar, c.wantMax)
+		}
+	}
+}

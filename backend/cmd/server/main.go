@@ -169,6 +169,7 @@ func run(log *slog.Logger) error {
 
 	// Organization configuration: onboarding packs, workflow templates, regional
 	// tone and schedules (daily briefing). Both stores implement ConfigStore.
+	orch.SetHelperLimits(planLimits) // temporary helpers: helpers at once and parts per request by plan (HELPERS_ENABLED gates the feature)
 	var orgCfg *application.OrgConfig
 	if cs, ok := store.(application.ConfigStore); ok {
 		orgCfg = &application.OrgConfig{Cfg: cfg.App, Store: cs, Core: store, Orch: orch, Rec: rec, Log: log, PlanLimits: planLimits}

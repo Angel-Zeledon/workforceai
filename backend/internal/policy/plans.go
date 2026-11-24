@@ -31,6 +31,30 @@ type Tier struct {
 	// projects run at the same time. A batch counts as ONE active project, whatever its size.
 	MaxBatchCustomers int `json:"max_batch_customers"`
 	BatchParallel     int `json:"batch_parallel"`
+	// Temporary helpers (docs/superpowers/specs/2026-11-23-ayudantes-temporales-design.md): how many run at the same
+	// time and how many parts one request may be split in. See HelperLimits for the effective values.
+	HelpersParallel int `json:"helpers_parallel"`
+	HelperParts     int `json:"helper_parts"`
+}
+
+// MaxHelperParts is the system-wide maximum of parts of one request (the legacy PlanPaid has no plan limit).
+const MaxHelperParts = 50
+
+// HelperLimits are the effective limits of temporary helpers for a plan: how many run at once (never more than the
+// organization's MAX_PARALLEL_PER_ORG; <= 0 there means no per-organization cap) and how many parts one request may
+// have. A tier without helper limits (the legacy PlanPaid, unknown plans) gets the system maximums.
+func HelperLimits(t Tier, maxParallelPerOrg int) (parallel, parts int) {
+	parallel, parts = t.HelpersParallel, t.HelperParts
+	if parts <= 0 || parts > MaxHelperParts {
+		parts = MaxHelperParts
+	}
+	if parallel <= 0 {
+		parallel = parts
+	}
+	if maxParallelPerOrg > 0 && parallel > maxParallelPerOrg {
+		parallel = maxParallelPerOrg
+	}
+	return parallel, parts
 }
 
 // Catalog is every plan a customer can be on, cheapest first.
@@ -43,11 +67,11 @@ type Tier struct {
 // the full office (20, the system-wide maximum). Plans differ in what costs money: AI, parallel work, storage, people.
 var Catalog = []Tier{
 	{ID: PlanFree, AIAllowanceUSD: 1,
-		MaxAgents: 20, MaxActiveProjects: 1, MaxSchedules: 2, MaxSeats: 2, StorageBytes: 500 << 20, MaxBatchCustomers: 10, BatchParallel: 2},
+		MaxAgents: 20, MaxActiveProjects: 1, MaxSchedules: 2, MaxSeats: 2, StorageBytes: 500 << 20, MaxBatchCustomers: 10, BatchParallel: 2, HelpersParallel: 3, HelperParts: 6},
 	{ID: PlanPro, PriceMonthlyUSD: 29, PriceYearlyUSD: 290, AIAllowanceUSD: 12,
-		MaxAgents: 20, MaxActiveProjects: 5, MaxSchedules: 10, MaxSeats: 10, StorageBytes: 10 << 30, MaxBatchCustomers: 100, BatchParallel: 3},
+		MaxAgents: 20, MaxActiveProjects: 5, MaxSchedules: 10, MaxSeats: 10, StorageBytes: 10 << 30, MaxBatchCustomers: 100, BatchParallel: 3, HelpersParallel: 6, HelperParts: 20},
 	{ID: PlanMax, PriceMonthlyUSD: 99, PriceYearlyUSD: 990, AIAllowanceUSD: 45,
-		MaxAgents: 20, MaxActiveProjects: 20, MaxSchedules: 20, MaxSeats: 50, StorageBytes: 50 << 30, MaxBatchCustomers: 500, BatchParallel: 5},
+		MaxAgents: 20, MaxActiveProjects: 20, MaxSchedules: 20, MaxSeats: 50, StorageBytes: 50 << 30, MaxBatchCustomers: 500, BatchParallel: 5, HelpersParallel: 8, HelperParts: 50},
 }
 
 // TierOf returns the catalog entry of a plan. PlanPaid (and anything unknown) has no plan limits.
