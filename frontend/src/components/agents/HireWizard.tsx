@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiError, api, type RoleTemplate } from "@/lib/api";
 import { useT } from "@/lib/i18n";
 import { registerRoleTemplates } from "@/lib/meta";
