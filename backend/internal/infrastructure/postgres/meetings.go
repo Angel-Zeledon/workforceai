@@ -17,8 +17,11 @@ type MeetingsStore struct{ S *Store }
 
 var _ meetings.Store = (*MeetingsStore)(nil)
 
-const meetingCols = `id, title, description, room, status, starts_at, ends_at, organizer, provider, join_url,
-	attendees, agenda, external, started_at, ended_at, cancelled_at, created_at, updated_at, COALESCE(office_id, '')`
+const meetingBaseCols = `id, title, description, room, status, starts_at, ends_at, organizer, provider, join_url,
+	attendees, agenda, external, started_at, ended_at, cancelled_at, created_at, updated_at`
+
+// meetingCols is what is read (meetingBaseCols with office_id, NULL as "").
+const meetingCols = meetingBaseCols + `, COALESCE(office_id, '')`
 
 func scanMeeting(org string, row pgx.Row) (meetings.Meeting, error) {
 	var m meetings.Meeting
@@ -42,7 +45,7 @@ func scanMeeting(org string, row pgx.Row) (meetings.Meeting, error) {
 
 func (p *MeetingsStore) CreateMeeting(ctx context.Context, m meetings.Meeting) error {
 	return p.S.WithOrgTx(ctx, m.OrgID, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `INSERT INTO meetings (org_id, `+meetingCols+`) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NULLIF($20,''))`,
+		_, err := tx.Exec(ctx, `INSERT INTO meetings (org_id, `+meetingBaseCols+`, office_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,NULLIF($20,''))`,
 			m.OrgID, m.ID, m.Title, m.Description, m.Room, string(m.Status), m.Start, m.End, m.Organizer, m.Provider, m.JoinURL,
 			jb(nz(m.Attendees)), jb(nzA(m.Agenda)), jb(m.External), m.StartedAt, m.EndedAt, m.CancelledAt, m.CreatedAt, m.UpdatedAt, m.OfficeID)
 		return err
