@@ -10,6 +10,7 @@ import { askers, baseOffice, groupByOffice, officeFilterChoices, officesSummary 
 import { useAgentOffices } from "@/lib/useAgentOffices";
 import { Avatar } from "../chat/ChatThread";
 import { inputCls } from "../org/shared";
+import { useCurrentOffice } from "@/lib/currentOffice";
 
 /** "Agentes": every agent you can see in rows grouped by base office, with a search and an office filter. Each row says
  *  who the agent is, its office (and the others it also works in, pending ones marked), who may ask it, its state, and
@@ -20,7 +21,10 @@ export function AgentsList() {
   const [offices, setOffices] = useState<OfficesResponse | null>(null);
   const [error, setError] = useState(false);
   const [q, setQ] = useState("");
-  const [office, setOffice] = useState("");
+  const [officeLocal, setOffice] = useState("");
+  // the office in the header wins over this screen's own filter
+  const { current, hasSelector } = useCurrentOffice();
+  const office = hasSelector && current !== "all" ? current : officeLocal;
   const agents = useStore((s) => s.agents);
   const general = t("offices.general");
 
@@ -44,14 +48,14 @@ export function AgentsList() {
 
   const groups = groupByOffice(entries, { query: q, office, generalLabel: general, others });
   const choices = officeFilterChoices(entries, general);
-  const showFilter = choices.length > 1;
+  const showFilter = choices.length > 1 && !(hasSelector && current !== "all");
 
   return (
     <div className="grid gap-4" data-testid="agent-directory">
       <div className="flex flex-wrap items-center gap-2">
         <input type="search" data-testid="agent-directory-search" aria-label={t("ag.search")} value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("ag.search")} className={`${inputCls} min-w-0 flex-1 sm:max-w-sm`} />
         {showFilter && (
-          <select data-testid="agent-directory-office" aria-label={t("ag.filter.office")} value={office} onChange={(e) => setOffice(e.target.value)} className={`${inputCls} w-auto max-w-full`}>
+          <select data-testid="agent-directory-office" aria-label={t("ag.filter.office")} value={officeLocal} onChange={(e) => setOffice(e.target.value)} className={`${inputCls} w-auto max-w-full`}>
             <option value="">{t("ag.filter.all")}</option>
             {choices.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
           </select>

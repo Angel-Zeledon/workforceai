@@ -1,7 +1,7 @@
 "use client";
 import { AgentMark } from "../brand/AgentMark";
 import { ProviderAlert } from "./ProviderAlert";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { MOCK } from "@/lib/config";
@@ -182,7 +182,15 @@ export function AppShell({ children }: { children: ReactNode }) {
   const pendingCount = usePendingCount();
   // the office the screens show: in the header next to Lista | Oficina 3D (own row on the phone)
   useCurrentOfficeBoot();
-  const hasOffices = useCurrentOffice().hasSelector;
+  const { hasSelector: hasOffices, current: currentOffice, offices: officeList, choose: chooseOffice } = useCurrentOffice();
+  // "Archivos de la oficina" (/d/<id>) and the header say the same office: a link into one picks it, picking another goes to it
+  const deptId = section === "department" ? decodeURIComponent(pathname.split("/")[2] ?? "") : "";
+  useEffect(() => { if (deptId && deptId !== currentOffice && officeList?.some((o) => o.id === deptId && o.can_enter)) chooseOffice(deptId); }, [deptId, officeList]); // eslint-disable-line react-hooks/exhaustive-deps
+  const lastOffice = useRef(currentOffice);
+  useEffect(() => {
+    const changed = lastOffice.current !== currentOffice; lastOffice.current = currentOffice;
+    if (changed && section === "department" && currentOffice !== "all" && currentOffice !== deptId) router.push(`/d/${encodeURIComponent(currentOffice)}`);
+  }, [currentOffice]); // eslint-disable-line react-hooks/exhaustive-deps
   const officeSelect = hasOffices && ["office", "dashboard", "pending", "agents", "projects", "department"].includes(section);
 
   return (

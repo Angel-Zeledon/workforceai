@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useT } from "@/lib/i18n";
 import { api } from "@/lib/api";
@@ -10,6 +10,8 @@ import { useStore } from "@/lib/store";
 import { useNeedsYou } from "@/lib/needsYou";
 import { actionsOf, filterKind, kindKey, kindTabs, titleRef, type NeedsYouAction, type NeedsYouItem } from "@/lib/needsYouLogic";
 import { PageHeader } from "../nav/ui2";
+import { useCurrentOffice } from "@/lib/currentOffice";
+import { filterByOffice } from "@/lib/currentOfficeLogic";
 import { Btn, Empty, Loading, timeAgo } from "../ui";
 
 /**
@@ -19,7 +21,16 @@ import { Btn, Empty, Loading, timeAgo } from "../ui";
  */
 export function NeedsYouView() {
   const { t } = useT();
-  const result = useNeedsYou((s) => s.result);
+  const full = useNeedsYou((s) => s.result);
+  const { current } = useCurrentOffice();
+  // only what waits in the office on screen; the numbers are recounted from it
+  const result = useMemo(() => {
+    if (!full || current === "all") return full;
+    const items = filterByOffice(full.items, current, (i) => i.office_id);
+    const counts: Record<string, number> = {};
+    for (const i of items) counts[i.kind] = (counts[i.kind] || 0) + 1;
+    return { ...full, items, total: items.length, counts };
+  }, [full, current]);
   const error = useNeedsYou((s) => s.error);
   const [kind, setKind] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
