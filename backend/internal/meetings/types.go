@@ -92,6 +92,9 @@ type Meeting struct {
 	CancelledAt *time.Time   `json:"cancelled_at"`
 	CreatedAt   time.Time    `json:"created_at"`
 	UpdatedAt   time.Time    `json:"updated_at"`
+	// OfficeID is the office the meeting was created from (a request or a conversation asked from an office; "" = the
+	// agents' base offices). The requests its tasks start are asked from that office.
+	OfficeID string `json:"office_id,omitempty"`
 
 	// Filled by the service for responses.
 	HasMinutes bool `json:"has_minutes"`

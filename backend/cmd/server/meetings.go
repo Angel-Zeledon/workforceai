@@ -121,6 +121,7 @@ func (m meetingTasks) CreateTasks(ctx context.Context, org string, b meetings.Ta
 		plan.Tasks = append(plan.Tasks, application.PlannedTask{Key: t.Key, Title: t.Title, Description: t.Description, AgentID: t.AgentID,
 			Reason: "Meeting follow-up"})
 	}
+	ctx = application.WithRequestOffice(application.WithoutRequestOffice(ctx), b.OfficeID) // the office of the meeting, none = the base
 	return m.orch.SubmitPlan(application.WithOrg(ctx, org), b.Text, plan)
 }
 

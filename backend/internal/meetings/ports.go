@@ -56,6 +56,7 @@ type TaskSpec struct {
 
 // TaskBatch is a request with a task per agent (the same path as /assign and /reunion).
 type TaskBatch struct {
+	OfficeID   string // the office of the meeting ("" = none): the request is asked from it
 	Text       string
 	Objectives []string
 	Tasks      []TaskSpec

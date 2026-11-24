@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
@@ -62,18 +63,18 @@ func (s *server) mountMeetings(r chi.Router) {
 	r.With(read).Get("/meetings/feeds", s.listMeetingFeeds)
 	r.With(write).Post("/meetings/feeds", s.createMeetingFeed)
 	r.With(write).Delete("/meetings/feeds/{fid}", s.revokeMeetingFeed)
-	r.With(read).Get("/meetings/{id}", s.getMeeting)
-	r.With(write).Patch("/meetings/{id}", s.patchMeeting)
-	r.With(write).Post("/meetings/{id}/start", s.startMeeting)
-	r.With(write).Post("/meetings/{id}/end", s.endMeeting)
-	r.With(write).Post("/meetings/{id}/cancel", s.cancelMeeting)
-	r.With(write).Post("/meetings/{id}/brief", s.briefMeeting)
-	r.With(write).Post("/meetings/{id}/sync", s.syncMeeting)
-	r.With(read).Get("/meetings/{id}/ics", s.meetingICS)
-	r.With(read).Get("/meetings/{id}/minutes", s.getMinutes)
-	r.With(write).Post("/meetings/{id}/minutes", s.postMinutes)
-	r.With(write).Put("/meetings/{id}/minutes", s.putMinutes)
-	r.With(write).Post("/meetings/{id}/minutes/tasks", s.minutesTasks)
+	r.With(read, s.workMeeting).Get("/meetings/{id}", s.getMeeting)
+	r.With(write, s.workMeeting).Patch("/meetings/{id}", s.patchMeeting)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/start", s.startMeeting)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/end", s.endMeeting)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/cancel", s.cancelMeeting)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/brief", s.briefMeeting)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/sync", s.syncMeeting)
+	r.With(read, s.workMeeting).Get("/meetings/{id}/ics", s.meetingICS)
+	r.With(read, s.workMeeting).Get("/meetings/{id}/minutes", s.getMinutes)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/minutes", s.postMinutes)
+	r.With(write, s.workMeeting).Put("/meetings/{id}/minutes", s.putMinutes)
+	r.With(write, s.workMeeting).Post("/meetings/{id}/minutes/tasks", s.minutesTasks)
 }
 
 // meetingFail maps service errors to a stable code and status. Messages never carry provider text.
@@ -154,7 +155,30 @@ func (s *server) listMeetings(w http.ResponseWriter, r *http.Request) {
 		s.meetingFail(w, err)
 		return
 	}
+	ws := s.work(r)
+	if err := ws.load(); err != nil {
+		s.fail(w, err)
+		return
+	}
+	out = slices.DeleteFunc(out, func(m meetings.Meeting) bool { return !ws.seesMeeting(m) }) // D3: a private office's meetings are its members'
 	writeJSON(w, http.StatusOK, out)
+}
+
+// seesMeeting: a meeting created from an office is that office's work (its members, and who organized it).
+func (ws *workScope) seesMeeting(m meetings.Meeting) bool {
+	return m.OfficeID == "" || ws.office(m.OfficeID) || ws.viewer(m.Organizer)
+}
+
+// workMeeting guards the routes about the meeting {id}: one of a private office the person is not in answers like a
+// missing one (a missing one is left to the handler).
+func (s *server) workMeeting(next http.Handler) http.Handler {
+	return s.guardWork("meeting", "id", func(r *http.Request, ws *workScope, id string) (bool, error) {
+		m, err := s.Meetings.Get(r.Context(), ws.org, id)
+		if errors.Is(err, meetings.ErrNotFound) {
+			return true, nil
+		}
+		return err == nil && ws.seesMeeting(m), err
+	})(next)
 }
 
 type meetingBody struct {

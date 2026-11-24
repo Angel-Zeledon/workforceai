@@ -301,6 +301,7 @@ func (s *Service) CreateTasks(ctx context.Context, org, actor, id string, indexe
 		b.Tasks = append(b.Tasks, TaskSpec{Key: key, Title: oneLine(it.Text, 80), AgentID: agent,
 			Description: ctxLine + ":\n" + it.Text + due + note + decisions + "\n\n" + tr("(El texto viene de las notas de la reunión: verifícalo antes de actuar.)", "(The text comes from the meeting notes: verify it before acting.)", "(O texto vem das notas da reunião: verifique antes de agir.)")})
 	}
+	b.OfficeID = m.OfficeID // the office of the meeting
 	req, err := s.Tasks.CreateTasks(ctx, org, b)
 	if err != nil {
 		return Minutes{}, "", err

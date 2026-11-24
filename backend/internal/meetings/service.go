@@ -11,6 +11,8 @@ import (
 
 	"github.com/google/uuid"
 
+	"aiworkforce/backend/internal/application"
+
 	"aiworkforce/backend/internal/calendar"
 )
 
@@ -403,7 +405,7 @@ func (s *Service) Create(ctx context.Context, org, actor string, in CreateInput)
 	now := s.Now().UTC()
 	m := Meeting{ID: newID(), OrgID: org, Title: title, Description: cleanText(in.Description, 8000), Room: in.Room, Status: StatusScheduled,
 		Start: in.Start.UTC(), End: in.End.UTC(), Organizer: actor, Provider: provider, JoinURL: link, Attendees: att, Agenda: agenda,
-		CreatedAt: now, UpdatedAt: now}
+		CreatedAt: now, UpdatedAt: now, OfficeID: application.RequestOfficeFrom(ctx)}
 	if err := s.Store.CreateMeeting(ctx, m); err != nil {
 		return Meeting{}, err
 	}
@@ -687,7 +689,7 @@ func (s *Service) Brief(ctx context.Context, org, actor, id, lang string) (strin
 	}
 	l := NormLang(lang)
 	tr := func(es, en, pt string) string { return map[string]string{"es": es, "en": en, "pt": pt}[l] }
-	b := TaskBatch{Text: tr("Preparación de la reunión: ", "Meeting preparation: ", "Preparação da reunião: ") + m.Title,
+	b := TaskBatch{OfficeID: m.OfficeID, Text: tr("Preparación de la reunión: ", "Meeting preparation: ", "Preparação da reunião: ") + m.Title,
 		Objectives: []string{tr("Que cada agente invitado llegue preparado a: ", "Every invited agent arrives prepared for: ", "Que cada agente convidado chegue preparado para: ") + m.Title}}
 	for i, a := range agents {
 		desc := fmt.Sprintf(tr("Reunión «%s» el %s. Participantes: %s.\n\nAgenda:\n%s\n\nPrepara tu postura para tu área: datos, riesgos y propuestas, en un resumen de máximo 200 palabras que se pueda leer en la reunión. Los puntos marcados «a tu cargo» los presentas tú. No envíes nada fuera ni cambies archivos; solo prepara el resumen.",

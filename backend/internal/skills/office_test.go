@@ -27,7 +27,10 @@ var (
 	boss  = Actor{ID: "u-owner", Admin: true}
 )
 
-func newOfficeEnv(t *testing.T) *officeEnv {
+func newOfficeEnv(t *testing.T) *officeEnv { return newOfficeEnvMulti(t, false) }
+
+// newOfficeEnvMulti is newOfficeEnv with MULTI_OFFICE_AGENTS on or off.
+func newOfficeEnvMulti(t *testing.T, multi bool) *officeEnv {
 	t.Helper()
 	e := newEnv(t, false)
 	depts := []offices.Dept{{ID: "d-legal", Name: "Legal", HeadUser: "u-ana"}, {ID: "d-sales", Name: "Ventas"}}
@@ -35,7 +38,7 @@ func newOfficeEnv(t *testing.T) *officeEnv {
 	agentDept := map[string]string{"a-elena": "d-legal", "a-valeria": "d-sales"}
 	people := []offices.Person{{UserID: "u-owner", Name: "Dueña", Admin: true}, {UserID: "u-ana", Name: "Ana"}, {UserID: "u-luis", Name: "Luis"}, {UserID: "u-marta", Name: "Marta"}}
 	agents := []offices.AgentRef{{ID: "a-elena", Name: "Elena"}, {ID: "a-valeria", Name: "Valeria"}, {ID: "a-sofia", Name: "Sofía"}}
-	off := offices.New(offices.Config{Store: offices.NewMemStore(), TTL: 1,
+	off := offices.New(offices.Config{Store: offices.NewMemStore(), TTL: 1, MultiOffice: multi,
 		Departments: func(context.Context, string) ([]offices.Dept, error) { return depts, nil },
 		Placements:  func(context.Context, string) (map[string]string, error) { return place, nil },
 		AgentDepts:  func(context.Context, string) (map[string]string, error) { return agentDept, nil },
