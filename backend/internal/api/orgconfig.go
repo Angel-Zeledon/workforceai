@@ -36,8 +36,8 @@ func (s *server) mountOrgConfig(r chi.Router) {
 
 	r.With(read).Get("/schedules", s.listSchedules)
 	r.With(s.can(auth.PermOrgManage)).Post("/schedules", s.createSchedule)
-	r.With(s.can(auth.PermOrgManage)).Put("/schedules/{id}", s.updateSchedule)
-	r.With(s.can(auth.PermOrgManage)).Delete("/schedules/{id}", s.deleteSchedule)
+	r.With(s.can(auth.PermOrgManage), s.workSchedule).Put("/schedules/{id}", s.updateSchedule)
+	r.With(s.can(auth.PermOrgManage), s.workSchedule).Delete("/schedules/{id}", s.deleteSchedule)
 
 	r.With(read).Get("/tax-templates", s.listTaxTemplates)
 }
@@ -197,6 +197,23 @@ func (s *server) listSchedules(w http.ResponseWriter, r *http.Request) {
 	}
 	v = slices.DeleteFunc(v, func(sc application.Schedule) bool { return sc.OfficeID != "" && !ws.office(sc.OfficeID) }) // D3: a private office's routines are its members'
 	writeJSON(w, 200, list(v))
+}
+
+// workSchedule guards the routes about the routine {id}: one of a private office the person is not in answers like a
+// missing one (a missing one is left to the handler), as GET /schedules leaves it out.
+func (s *server) workSchedule(next http.Handler) http.Handler {
+	return s.guardWork("schedule", "id", func(r *http.Request, ws *workScope, id string) (bool, error) {
+		v, err := s.OrgConfig.ListSchedules(r.Context())
+		if err != nil {
+			return false, err
+		}
+		for _, sc := range v {
+			if sc.ID == id {
+				return sc.OfficeID == "" || ws.office(sc.OfficeID), nil
+			}
+		}
+		return true, nil
+	})(next)
 }
 
 func (s *server) createSchedule(w http.ResponseWriter, r *http.Request) {
