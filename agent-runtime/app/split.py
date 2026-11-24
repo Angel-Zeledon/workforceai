@@ -146,6 +146,14 @@ def list_from_text(text: str) -> list[str]:
     return []
 
 
+def known_refs(req: SplitRequest) -> set[str]:
+    """The refs an answer may cite: the items' refs, or, with no items, the numbers of the list in the text
+    (empty when the text holds no list, so a part can cite nothing)."""
+    if req.items:
+        return {i.ref for i in req.items}
+    return {str(n + 1) for n in range(len(list_from_text(req.text)))}
+
+
 def split_rules(req: SplitRequest) -> SplitResponse | None:
     """The deterministic path. None when the rules do not apply (the model or the simulation decides)."""
     loc = _loc(req.locale)
@@ -201,7 +209,7 @@ def finalize_split(resp: SplitResponse, req: SplitRequest) -> SplitResponse:
     if not resp.worth_it:
         return SplitResponse(worth_it=False, reason=_clean(resp.reason, MAX_REASON) or _REASON_NO[loc], parts=[],
                              source=resp.source, usage=resp.usage)
-    known = {i.ref for i in req.items}
+    known = known_refs(req)
     seen: set[str] = set()
     parts: list[SplitPart] = []
     for idx, part in enumerate(resp.parts):
