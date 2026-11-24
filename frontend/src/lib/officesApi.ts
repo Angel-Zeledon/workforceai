@@ -4,30 +4,31 @@ import type { AccessInput, AccessView, DirectoryEntry, NoteScope, OfficeView, Of
 
 /** Contract: backend/internal/api/offices.go, offices_agents.go and offices_notes.go (E2 "Oficinas", /api/v1). */
 
-const mockOffices: OfficesResponse = {
-  offices: [{ id: "general", name: "General", visibility: "open", general: true, leads: [{ user_id: "demo", name: "Demo" }], members: [{ user_id: "demo", name: "Demo" }],
-    member_count: 1, agents: [], can_enter: true, can_manage: true, is_member: true, is_lead: true },
-    { id: "contabilidad", name: "Contabilidad", visibility: "private", general: false, leads: [{ user_id: "demo", name: "Demo" }],
-      members: [{ user_id: "demo", name: "Demo" }, { user_id: "u_laura", name: "Laura Méndez" }], // Laura's files: lib/drive.ts (D2 demo)
-      member_count: 2, agents: ["accounting"], can_enter: true, can_manage: true, is_member: true, is_lead: true, folder_path: "/Offices/Contabilidad" },
-    // D4 demo: a department the person is not in (it shares a folder with Contabilidad and can receive what Contabilidad shares)
-    { id: "legal", name: "Legal", visibility: "open", general: false, leads: [{ user_id: "u_legal", name: "Rodrigo Pineda" }], members: [{ user_id: "u_legal", name: "Rodrigo Pineda" }],
-      member_count: 1, agents: [], can_enter: false, can_manage: false, is_member: false, is_lead: false, folder_path: "/Offices/Legal" }],
-  departments: [], restricted: false, me: { user_id: "demo", admin: true, offices: ["general", "contabilidad"] },
-};
-
-/** Demo: the directory lists the demo's own agents (owned by the General office), so the Agents tab is not empty. */
+/** Demo: the offices and the agents' base offices come from lib/mock/agent-offices-mock.ts. */
+async function mockList(): Promise<OfficesResponse> {
+  const [{ mockBackend }, { mockOfficeWorld }] = await Promise.all([import("./mock/engine"), import("./mock/agent-offices-mock")]);
+  return mockOfficeWorld.offices(mockBackend.agentList().map((a) => a.id));
+}
 async function mockDirectory(): Promise<DirectoryEntry[]> {
-  const { mockBackend } = await import("./mock/engine");
-  return mockBackend.agentList().map((a) => ({
-    id: a.id, name: a.name, role: a.role, title: a.title,
-    owner_kind: "office" as const, owner_id: "general", owner_name: "General", office_id: "general", office_name: "General",
-    visibility: "office" as const, shares: [], explicit: false, rights: { see: true, use: true, edit: true },
-  }));
+  const [{ mockBackend }, { mockOfficeWorld }] = await Promise.all([import("./mock/engine"), import("./mock/agent-offices-mock")]);
+  return mockOfficeWorld.directory(mockBackend.agentList());
+}
+
+async function mockAccess(agent: string): Promise<AccessView> {
+  const e = (await mockDirectory()).find((x) => x.id === agent);
+  if (!e) throw new Error(`GET /agents/${agent}/access -> 404`);
+  return e;
+}
+async function mockSetAccess(agent: string, b: AccessInput): Promise<AccessView> {
+  const { mockOfficeWorld } = await import("./mock/agent-offices-mock");
+  const cur = await mockAccess(agent);
+  const office = b.owner_kind === "office" && b.owner_id ? b.owner_id : cur.office_id;
+  mockOfficeWorld.setBase(agent, office, b.visibility ?? cur.visibility, b.shares ?? cur.shares);
+  return mockAccess(agent);
 }
 
 export const officesApi = {
-  list: (): Promise<OfficesResponse> => (MOCK ? Promise.resolve(mockOffices) : call<OfficesResponse>("GET", "/offices")),
+  list: (): Promise<OfficesResponse> => (MOCK ? mockList() : call<OfficesResponse>("GET", "/offices")),
   enable: (department_id: string, visibility: OfficeVisibility) => call<OfficeView>("POST", "/offices", { department_id, visibility }),
   setVisibility: (id: string, visibility: OfficeVisibility) => call<OfficeView>("PUT", `/offices/${encodeURIComponent(id)}`, { visibility }),
   disable: (id: string) => call<void>("DELETE", `/offices/${encodeURIComponent(id)}`),
@@ -36,8 +37,8 @@ export const officesApi = {
 
   directory: (): Promise<{ agents: DirectoryEntry[]; restricted: boolean }> =>
     (MOCK ? mockDirectory().then((agents) => ({ agents, restricted: false })) : call("GET", "/agents/directory")),
-  access: (agent: string) => call<AccessView>("GET", `/agents/${encodeURIComponent(agent)}/access`),
-  setAccess: (agent: string, b: AccessInput) => call<AccessView>("PUT", `/agents/${encodeURIComponent(agent)}/access`, b),
+  access: (agent: string) => (MOCK ? mockAccess(agent) : call<AccessView>("GET", `/agents/${encodeURIComponent(agent)}/access`)),
+  setAccess: (agent: string, b: AccessInput) => (MOCK ? mockSetAccess(agent, b) : call<AccessView>("PUT", `/agents/${encodeURIComponent(agent)}/access`, b)),
 
   notes: (scope: NoteScope, ref = ""): Promise<{ notes: TeamNote[]; can_write: boolean; can_promote: boolean }> =>
     (MOCK ? Promise.resolve({ notes: [], can_write: true, can_promote: false })
