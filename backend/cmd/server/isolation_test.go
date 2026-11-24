@@ -71,7 +71,7 @@ func TestIsolation_Files(t *testing.T) {
 			return "denied:" + pl.Deny
 		}
 		r := fs.Run(c, agent, "read", map[string]any{"path": path}, false)
-		return r.Summary + " " + strings.Join(r.Lines(), "")
+		return r.Summary + " " + r.Text
 	}
 	cases := []struct {
 		office, path string
