@@ -25,12 +25,12 @@ import (
 // the org chart, agent owners and visibility, office and personal memory. Postgres (migration 815) when there is a
 // database, memory otherwise. Without authentication there are no people, so nothing is ever filtered.
 func wireOffices(pg *postgres.Store, store application.Store, authStore auth.Store, chart *orgchart.Service, rec *application.Recorder,
-	cleanNote func(string) string) *offices.Service {
+	cleanNote func(string) string, multiOffice bool) *offices.Service {
 	var st offices.Store = offices.NewMemStore()
 	if pg != nil {
 		st = &postgres.OfficesStore{S: pg}
 	}
-	cfg := offices.Config{Store: st, CleanNote: cleanNote,
+	cfg := offices.Config{Store: st, CleanNote: cleanNote, MultiOffice: multiOffice,
 		Agents: func(ctx context.Context, org string) ([]offices.AgentRef, error) {
 			as, err := store.ListAgents(application.WithOrg(ctx, org), org)
 			out := make([]offices.AgentRef, 0, len(as))
@@ -89,6 +89,8 @@ func wireOffices(pg *postgres.Store, store application.Store, authStore auth.Sto
 // departmentWiring is what wireDepartments seals (nil parts are skipped).
 type departmentWiring struct {
 	AuthOn    bool
+	// MultiOffice is MULTI_OFFICE_AGENTS (off by default: see config.Config.MultiOfficeAgents).
+	MultiOffice bool
 	PG        *postgres.Store
 	Store     application.Store
 	AuthStore auth.Store
@@ -109,7 +111,7 @@ type departmentWiring struct {
 // its skills and who receives its live events. It runs BEFORE orch.Recover (TestDepartmentsAreWiredBeforeRecover):
 // a request resumed by durable execution emits events, asks for approvals and writes memory right away.
 func wireDepartments(w departmentWiring) *offices.Service {
-	svc := wireOffices(w.PG, w.Store, w.AuthStore, w.Chart, w.Rec, noteCleaner(w.Memory))
+	svc := wireOffices(w.PG, w.Store, w.AuthStore, w.Chart, w.Rec, noteCleaner(w.Memory), w.MultiOffice)
 	wireApprovers(w.Orch, w.Notify, w.Slack, svc, w.AuthStore, w.AuthOn) // D3: an office's approvals go to its responsibles
 	officeRecall(w.Memory, svc)
 	if svc == nil {

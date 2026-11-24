@@ -17,7 +17,12 @@ func withOffices(d *api.Deps) { withOfficesAs(d, nil) }
 
 // withOfficesAs is withOffices reading the people as reader when the request has no person (the public API's token;
 // the server reads them by organization).
-func withOfficesAs(d *api.Deps, reader func() auth.Principal) {
+func withOfficesAs(d *api.Deps, reader func() auth.Principal) { withOfficesCfg(d, reader, false) }
+
+// withOfficesMulti is withOffices with MULTI_OFFICE_AGENTS on.
+func withOfficesMulti(d *api.Deps) { withOfficesCfg(d, nil, true) }
+
+func withOfficesCfg(d *api.Deps, reader func() auth.Principal, multi bool) {
 	members := func(ctx context.Context) ([]auth.Member, error) {
 		p, ok := auth.PrincipalFrom(ctx)
 		if !ok && reader != nil {
@@ -34,7 +39,7 @@ func withOfficesAs(d *api.Deps, reader func() auth.Principal) {
 		return out, err
 	}
 	st := d.OrgChart.Store
-	d.Offices = offices.New(offices.Config{Store: offices.NewMemStore(), TTL: 1,
+	d.Offices = offices.New(offices.Config{Store: offices.NewMemStore(), TTL: 1, MultiOffice: multi,
 		Departments: func(ctx context.Context, org string) ([]offices.Dept, error) {
 			ds, err := st.ListDepartments(ctx, org)
 			out := []offices.Dept{}

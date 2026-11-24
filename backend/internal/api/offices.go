@@ -30,6 +30,7 @@ func (s *server) mountOffices(r chi.Router) {
 	r.With(read).Put("/offices/{id}/members/{user_id}", s.putOfficeMember)
 	r.With(read).Delete("/offices/{id}/members/{user_id}", s.deleteOfficeMember)
 	s.mountAgentAccess(r)
+	s.mountAgentOffices(r)
 	s.mountTeamNotes(r)
 }
 
