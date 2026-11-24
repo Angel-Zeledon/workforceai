@@ -1,7 +1,7 @@
 // The temporary helpers in the "Plano" office: vector figures (figure.ts) in neutral grey next to the desk of the employee who
 // coordinates them. Where they stand comes from helperFigures.ts, the same plan as the 3D styles. They are not agents: a click selects
 // the OWNER, they are not in the labels, the counters or the simulation. With no active group (or the flag off) update() only reads
-// the store. With reduced motion only a "+8 ayudantes" pill stands over the desk.
+// the store. With reduced motion, or on a machine that draws in software (officeQuality.ts), only a "N ayudantes" label stands over the desk.
 import type * as PIXI from "pixi.js";
 import { useHelpers } from "@/lib/helpers";
 import { isActiveGroup } from "@/lib/helpersLogic";
@@ -17,7 +17,7 @@ const FONT = "IBM Plex Sans, Inter, system-ui, sans-serif";
 const STYLES = ["short", "bob", "short", "bun", "ponytail"];
 
 export interface HelperTexts { name(f: Fig): string; more(n: number): string; label(n: number): string }
-export interface Helpers { update(o: { clock: number; reduce: boolean; scale: number; figScale: number }): void; destroy(): void }
+export interface Helpers { update(o: { clock: number; reduce: boolean; scale: number; figScale: number; labelOnly?: boolean }): void; destroy(): void }
 
 interface Item { fig: Fig; g: PIXI.Graphics; born: number; gone: number | null; look: ReturnType<typeof lookOf> }
 interface Pill { c: PIXI.Container; bg: PIXI.Graphics; text: PIXI.Text; sig: string }
@@ -38,7 +38,7 @@ export function createHelpers(host: PeopleHost, deskMap: () => Map<string, { pos
   let hover: string | null = null;
   let slots: Record<string, number> = {};
   let plan: Plan = { figures: [], more: [], labels: [], slotOf: {} };
-  let lastGroups: unknown = null, lastDesks: unknown = null, lastReduce: boolean | null = null;
+  let lastGroups: unknown = null, lastDesks: unknown = null, lastLabel: boolean | null = null;
 
   const makePill = (): Pill => {
     const c = new P.Container();
@@ -75,18 +75,19 @@ export function createHelpers(host: PeopleHost, deskMap: () => Map<string, { pos
   const dropItem = (k: string) => { const it = items.get(k); if (it) { it.g.destroy(); items.delete(k); } if (hover === k) hover = null; };
 
   return {
-    update({ clock, reduce, scale, figScale }) {
+    update({ clock, reduce, scale, figScale, labelOnly: softwareOnly }) {
+      const labelOnly = reduce || !!softwareOnly; // one count label per owner, no figures
       const st = useHelpers.getState();
       const active = st.enabled && Object.values(st.groups).some(isActiveGroup) && !useOfficeLayout.getState().editing;
       if (!active && !items.size && !pills.size) return; // zero cost: nothing to draw
       const now = performance.now() / 1000;
       const desks = deskMap();
-      if (st.groups !== lastGroups || desks !== lastDesks || reduce !== lastReduce || !active) {
-        lastGroups = st.groups; lastDesks = desks; lastReduce = reduce;
+      if (st.groups !== lastGroups || desks !== lastDesks || labelOnly !== lastLabel || !active) {
+        lastGroups = st.groups; lastDesks = desks; lastLabel = labelOnly;
         if (active) {
           const pos: Record<string, [number, number]> = {};
           for (const [id, d] of desks) pos[id] = d.pos;
-          plan = planHelpers(Object.values(st.groups), pos, { labelOnly: reduce, prev: slots });
+          plan = planHelpers(Object.values(st.groups), pos, { labelOnly, prev: slots });
           slots = plan.slotOf;
         } else plan = { figures: [], more: [], labels: [], slotOf: {} };
       }
@@ -125,7 +126,7 @@ export function createHelpers(host: PeopleHost, deskMap: () => Map<string, { pos
         tip.c.scale.set(scale);
         tip.c.visible = true;
       } else if (tip) tip.c.visible = false;
-      // "+N" after the visible ones, or the whole count in the one-label mode
+      // "+N" after the visible figures, or the plain count ("5 ayudantes") in the one-label mode
       const want = new Map<string, string>();
       for (const m of plan.more) want.set("m:" + m.groupId, T.more(m.n));
       for (const l of plan.labels) want.set("l:" + l.owner, T.label(l.n));

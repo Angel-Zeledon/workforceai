@@ -10,6 +10,7 @@ import { useCost } from "@/lib/cost";
 import { useProjects } from "@/lib/projects/store";
 import { fmtUsd } from "@/lib/i18n";
 import { stateMeta } from "@/lib/meta";
+import { isSoftwareRenderer } from "../officeQuality";
 import { FIXTURE_IDS, FIXTURES, LEGACY_SLOTS, ZONE_NAMES, fixtureWorld, restOn, zoneCenterOf } from "@/lib/officeLayoutModel";
 import { LINK_KIND } from "../kinds";
 import { getSignals } from "../officeSignals";
@@ -58,6 +59,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
   const s0 = size();
   await app.init({ width: s0.w, height: s0.h, background: 0xffffff, antialias: true, resolution: Math.min(2, window.devicePixelRatio || 1), autoDensity: true });
   el.appendChild(app.canvas);
+  const software = softwareGl(app); // no GPU: the helpers stay one label (as in 3D)
   app.canvas.style.display = "block";
   app.canvas.style.touchAction = "manipulation";
   app.ticker.maxFPS = 30;
@@ -460,7 +462,7 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
     // consult / delegation lines, travelling folders, coins and shields
     fx.update({ now: nowMs, dtS: dt, reduce, scale: chipScale });
     people.update({ dtS: dt, clock, reduce, scale: chipScale, figScale: FS });
-    helpers.update({ clock, reduce, scale: chipScale, figScale: FS });
+    helpers.update({ clock, reduce, scale: chipScale, figScale: FS, labelOnly: software });
     placePopups(toScreen, app.screen.width, app.screen.height);
 
     // speech bubbles (a message line wins over the working line of the same agent)
@@ -558,4 +560,14 @@ export async function mountFlatScene(el: HTMLElement, tr: () => Tr): Promise<Fla
       nodes.clear(); zoneChips.clear(); bubViews.clear(); statics = []; deskDyn = [];
     },
   };
+}
+
+/** The GPU driver's name for itself is a software one (SwiftShader, llvmpipe...): the same rule as the 3D office. */
+function softwareGl(app: PIXI.Application): boolean {
+  const gl = (app.renderer as { gl?: WebGLRenderingContext | WebGL2RenderingContext }).gl;
+  if (!gl) return false;
+  try {
+    const ext = gl.getExtension("WEBGL_debug_renderer_info");
+    return isSoftwareRenderer(String(gl.getParameter(ext ? ext.UNMASKED_RENDERER_WEBGL : gl.RENDERER) || ""));
+  } catch { return false; }
 }

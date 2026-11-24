@@ -208,7 +208,7 @@ function OfficeCard({ o, people, admin, meId, busy, run, onMemory, onEdit, onSav
       </div>
       <div className="flex flex-wrap gap-x-3 text-[12px] text-mute">
         <span>{t("offices.leads", { names: o.leads.map((l) => l.name || "?").join(", ") || t("org.noHead") })}</span>
-        <span>{o.can_enter ? t("offices.counts", { people: o.member_count, agents: o.agents.length }) : t("offices.countsPeople", { people: o.member_count })}</span>
+        <span>{o.can_enter ? t("offices.counts", { people: t("count.people", { count: o.member_count }), agents: t("count.agents", { count: o.agents.length }) }) : t("count.people", { count: o.member_count })}</span>
         {o.is_lead && !o.general && <span className="font-semibold text-accent">{t("offices.youLead")}</span>}
         {!o.is_lead && o.is_member && !o.general && <span className="font-semibold text-accent">{t("offices.youMember")}</span>}
       </div>
